@@ -14,6 +14,17 @@ export function CreateTaskModal({ open, onClose, onCreate }: CreateTaskModalProp
   const [foundation, setFoundation] = useState("");
   const [expectedOutcome, setExpectedOutcome] = useState("");
 
+  function resetForm() {
+    setTitle("");
+    setFoundation("");
+    setExpectedOutcome("");
+  }
+
+  function close() {
+    resetForm();
+    onClose();
+  }
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const value = title.trim();
@@ -23,9 +34,7 @@ export function CreateTaskModal({ open, onClose, onCreate }: CreateTaskModalProp
       foundation: foundation.trim(),
       expectedOutcome: expectedOutcome.trim()
     });
-    setTitle("");
-    setFoundation("");
-    setExpectedOutcome("");
+    resetForm();
   }
 
   return (
@@ -33,7 +42,7 @@ export function CreateTaskModal({ open, onClose, onCreate }: CreateTaskModalProp
       open={open}
       title="新建学习任务"
       description="先写下学习目标即可，其他信息可以在后续对话和练习中逐步完善。"
-      onClose={onClose}
+      onClose={close}
     >
       <form className="grid gap-4" onSubmit={handleSubmit}>
         <label className="grid gap-2 text-sm font-medium text-ink">
@@ -66,7 +75,7 @@ export function CreateTaskModal({ open, onClose, onCreate }: CreateTaskModalProp
         </label>
 
         <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" onClick={onClose}>
+          <Button type="button" onClick={close}>
             取消
           </Button>
           <Button type="submit" variant="primary" disabled={!title.trim()}>

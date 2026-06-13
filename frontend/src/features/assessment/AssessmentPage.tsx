@@ -12,12 +12,14 @@ type AssessmentPageProps = {
 
 export function AssessmentPage({ task, onStartAssessment, onGenerateResource, isAssessing }: AssessmentPageProps) {
   const score = task.assessment.score;
+  const primaryWeakPoint = task.assessment.weakPoints[0] || "当前重点";
 
   if (!task.assessment.tested) {
     return (
       <EmptyState
         title="还没有评估结果"
         description="完成一次小测评后，这里会展示掌握度、薄弱点和下一步建议。"
+        tone="green"
         action={<Button variant="primary" onClick={onStartAssessment} loading={isAssessing}>开始第一次测评</Button>}
       />
     );
@@ -29,12 +31,13 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
         <div>
           <p className="text-xs font-medium text-rose-700">学习反馈</p>
           <h1 className="text-2xl font-semibold text-ink">学习评估</h1>
-          <p className="mt-2 text-sm text-muted">根据练习、对话和学习投入生成的阶段性反馈。</p>
+          <p className="mt-2 text-sm text-muted">先看当前状态，再完成下一步练习。</p>
+          {isAssessing ? <p className="mt-2 text-xs text-amber-700">正在更新本次测评结果...</p> : null}
         </div>
         <Button variant="primary" onClick={onStartAssessment} loading={isAssessing}>开始测评</Button>
       </header>
 
-      <section className="grid grid-cols-[320px_1fr] gap-5">
+      <section className="grid gap-5 xl:grid-cols-[320px_1fr]">
         <div className="rounded-[18px] border border-slate-200 bg-[radial-gradient(circle_at_top,#fff7ed,#ffffff_58%)] p-5">
           <p className="text-sm text-muted">当前掌握度</p>
           <div
@@ -51,10 +54,16 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-muted">{task.assessment.mastery}</p>
+          <div className="mt-5 rounded-ui border border-amber-100 bg-white/80 p-3">
+            <p className="text-xs font-medium text-amber-700">诊断结论</p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              当前更适合先处理“{primaryWeakPoint}”，再进入下一阶段学习，避免直接堆新内容。
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-[14px] border border-slate-200 bg-white p-4">
               <Activity className="text-emerald-700" size={19} />
               <p className="mt-3 text-xs text-muted">学习投入</p>
@@ -73,12 +82,43 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
           </div>
 
           <div className="rounded-[16px] border border-slate-200 bg-white p-5">
+            <h2 className="section-title">本次结论</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              {[
+                { label: "当前状态", value: task.assessment.mastery },
+                { label: "最大问题", value: primaryWeakPoint },
+                { label: "建议动作", value: "先做 3 道针对练习" },
+                { label: "目标", value: "提升表达稳定性" }
+              ].map((item) => (
+                <div key={item.label} className="rounded-ui border border-line bg-slate-50 px-3 py-3">
+                  <p className="text-xs text-muted">{item.label}</p>
+                  <p className="mt-1 text-sm font-medium leading-5 text-ink">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[16px] border border-slate-200 bg-white p-5">
             <div className="mb-4 flex items-center gap-2">
               <CheckCircle2 className="text-green-600" size={18} />
               <h2 className="section-title">下一步建议</h2>
             </div>
             <p className="text-sm leading-6 text-muted">{task.assessment.nextSuggestion}</p>
-            <div className="mt-5 grid grid-cols-2 gap-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-ui bg-slate-50 p-3">
+                <p className="text-xs text-muted">推荐动作</p>
+                <p className="mt-1 text-sm font-medium text-ink">先练后讲</p>
+              </div>
+              <div className="rounded-ui bg-amber-50 p-3">
+                <p className="text-xs text-amber-700">优先级</p>
+                <p className="mt-1 text-sm font-medium text-ink">薄弱点优先</p>
+              </div>
+              <div className="rounded-ui bg-emerald-50 p-3">
+                <p className="text-xs text-emerald-700">复盘方式</p>
+                <p className="mt-1 text-sm font-medium text-ink">错因归类</p>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div>
                 <h3 className="text-sm font-semibold text-ink">薄弱点</h3>
                 <div className="mt-2 flex flex-wrap gap-2">

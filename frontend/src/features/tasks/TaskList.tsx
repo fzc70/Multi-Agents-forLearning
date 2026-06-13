@@ -1,4 +1,6 @@
 import type { LearningTask } from "../../shared/types/task";
+import { getPathProgress } from "../../shared/utils/progress";
+import { formatDisplayTime } from "../../shared/utils/time";
 
 type TaskListProps = {
   tasks: LearningTask[];
@@ -11,11 +13,11 @@ export function TaskList({ tasks, selectedId, onSelect }: TaskListProps) {
     <div className="surface overflow-hidden">
       <div className="border-b border-line px-5 py-4">
         <h2 className="section-title">学习任务</h2>
-        <p className="subtle mt-1">选择一个任务后，再进入对话、资源、路径或评估。</p>
       </div>
       <div className="divide-y divide-line">
         {tasks.map((task) => {
           const active = task.id === selectedId;
+          const progress = getPathProgress(task);
           return (
             <button
               key={task.id}
@@ -31,12 +33,14 @@ export function TaskList({ tasks, selectedId, onSelect }: TaskListProps) {
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted">{task.category}</span>
                   </div>
                   <p className="mt-2 text-sm leading-6 text-muted">{task.nextAction}</p>
-                  <p className="mt-2 text-xs text-muted">最近更新：{task.updatedAt}</p>
+                  <p className="mt-2 text-xs text-muted">最近更新：{formatDisplayTime(task.updatedAt)}</p>
                 </div>
-                <span className="text-sm font-medium text-ink">{task.progress}%</span>
+                <span className="text-sm font-medium text-ink">
+                  {progress.completed}/{progress.total}
+                </span>
               </div>
               <div className="mt-3 h-1.5 rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${task.progress}%` }} />
+                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress.percent}%` }} />
               </div>
             </button>
           );

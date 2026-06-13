@@ -3,36 +3,22 @@ import { useState } from "react";
 import type { LearningTask, PageKey } from "../types/task";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
+import { getPathProgress } from "../utils/progress";
 
 type TaskContextBarProps = {
   page: Exclude<PageKey, "tasks">;
   task: LearningTask;
   tasks: LearningTask[];
   onTaskChange: (taskId: string) => void;
-  onPrimaryAction: () => void;
-  busyAction: "resource" | "path" | "assessment" | null;
-};
-
-const actionText: Record<Exclude<PageKey, "tasks">, string> = {
-  chat: "继续学习",
-  resources: "生成资源",
-  path: "调整路径",
-  assessment: "开始测评"
 };
 
 export function TaskContextBar({
-  page,
   task,
   tasks,
-  onTaskChange,
-  onPrimaryAction,
-  busyAction
+  onTaskChange
 }: TaskContextBarProps) {
   const [open, setOpen] = useState(false);
-  const isPrimaryBusy =
-    (page === "resources" && busyAction === "resource") ||
-    (page === "path" && busyAction === "path") ||
-    (page === "assessment" && busyAction === "assessment");
+  const progress = getPathProgress(task);
 
   return (
     <>
@@ -47,11 +33,13 @@ export function TaskContextBar({
           </div>
           <div className="hidden h-8 w-px bg-line md:block" />
           <div className="hidden items-center gap-2 md:flex">
-            <span className="text-xs text-muted">进度</span>
+            <span className="text-xs text-muted">路径进度</span>
             <div className="h-2 w-28 rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-emerald-600" style={{ width: `${task.progress}%` }} />
+              <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress.percent}%` }} />
             </div>
-            <span className="text-xs font-medium text-ink">{task.progress}%</span>
+            <span className="text-xs font-medium text-ink">
+              {progress.completed}/{progress.total}
+            </span>
           </div>
         </div>
 
@@ -59,15 +47,14 @@ export function TaskContextBar({
           <Button variant="ghost" icon={<ChevronDown size={16} />} onClick={() => setOpen(true)}>
             切换任务
           </Button>
-          <Button variant="primary" onClick={onPrimaryAction} loading={isPrimaryBusy}>
-            {actionText[page]}
-          </Button>
         </div>
       </div>
 
-      <Modal open={open} title="切换学习任务" description="选择后，当前页面会围绕新的任务展示内容。" onClose={() => setOpen(false)}>
+      <Modal open={open} title="切换学习任务" onClose={() => setOpen(false)}>
         <div className="grid gap-2">
-          {tasks.map((item) => (
+          {tasks.map((item) => {
+            const itemProgress = getPathProgress(item);
+            return (
             <button
               key={item.id}
               className={`rounded-ui border px-4 py-3 text-left transition ${
@@ -82,11 +69,14 @@ export function TaskContextBar({
             >
               <div className="flex items-center justify-between gap-4">
                 <span className="font-medium text-ink">{item.title}</span>
-                <span className="text-xs text-muted">{item.progress}%</span>
+                <span className="text-xs text-muted">
+                  路径 {itemProgress.completed}/{itemProgress.total}
+                </span>
               </div>
               <p className="mt-1 text-sm text-muted">{item.nextAction}</p>
             </button>
-          ))}
+            );
+          })}
         </div>
       </Modal>
     </>

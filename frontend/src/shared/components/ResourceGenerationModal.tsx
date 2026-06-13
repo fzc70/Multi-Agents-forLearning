@@ -49,7 +49,7 @@ export function ResourceGenerationModal({
     <Modal
       open={open}
       title={mode === "choice" ? "生成学习资源" : "选择要生成的资源"}
-      description={mode === "choice" ? "可以让系统自动生成，也可以自己选择需要的资源类型。" : "选择完成后，会一次性模拟生成所选资源。"}
+      description={mode === "choice" ? "可以让系统自动生成，也可以自己选择需要的资源类型。" : "选择完成后，会一次性生成所选资源。"}
       onClose={close}
     >
       {mode === "choice" ? (
@@ -57,6 +57,7 @@ export function ResourceGenerationModal({
           <button
             className="rounded-ui border border-emerald-200 bg-emerald-50/70 p-4 text-left transition hover:bg-emerald-50"
             disabled={isGenerating}
+            aria-label="智能生成"
             onClick={() => {
               onSmartGenerate();
               close();
@@ -72,6 +73,7 @@ export function ResourceGenerationModal({
           <button
             className="rounded-ui border border-line bg-white p-4 text-left transition hover:border-emerald-200 hover:bg-slate-50"
             disabled={isGenerating}
+            aria-label="自选类型"
             onClick={() => setMode("custom")}
           >
             <div className="flex items-center gap-2 font-semibold text-ink">

@@ -6,14 +6,12 @@ import { Sidebar } from "./Sidebar";
 
 type AppLayoutProps = {
   page: PageKey;
-  task: LearningTask;
+  task: LearningTask | null;
   tasks: LearningTask[];
   children: ReactNode;
   onPageChange: (page: PageKey) => void;
   onTaskChange: (taskId: string) => void;
-  onContextAction: () => void;
   onAssistantSend: (message: string) => void;
-  busyAction: "resource" | "path" | "assessment" | null;
 };
 
 export function AppLayout({
@@ -23,29 +21,25 @@ export function AppLayout({
   children,
   onPageChange,
   onTaskChange,
-  onContextAction,
-  onAssistantSend,
-  busyAction
+  onAssistantSend
 }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-canvas">
       <Sidebar page={page} onPageChange={onPageChange} />
       <main className="ml-[88px] px-8 py-7">
         <div className="mx-auto max-w-[1220px]">
-          {page !== "tasks" ? (
+          {page !== "tasks" && task ? (
             <TaskContextBar
               page={page}
               task={task}
               tasks={tasks}
               onTaskChange={onTaskChange}
-              onPrimaryAction={onContextAction}
-              busyAction={busyAction}
             />
           ) : null}
           {children}
         </div>
       </main>
-      <AssistantLauncher task={task} onSend={onAssistantSend} />
+      {task ? <AssistantLauncher task={task} onSend={onAssistantSend} /> : null}
     </div>
   );
 }

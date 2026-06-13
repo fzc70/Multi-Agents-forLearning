@@ -5,12 +5,13 @@ import { Button } from "../../shared/components/Button";
 
 type ChatPageProps = {
   task: LearningTask;
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string) => void | Promise<void>;
+  isSending: boolean;
 };
 
-const prompts = ["我应该从哪里开始？", "帮我制定今天的学习计划", "给我一道适合当前水平的练习"];
+const prompts = ["讲解一下当前重点", "出一道小题", "帮我复盘错误", "调整今天学习计划"];
 
-export function ChatPage({ task, onSendMessage }: ChatPageProps) {
+export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
   const [text, setText] = useState("");
 
   function send(value: string) {
@@ -31,10 +32,22 @@ export function ChatPage({ task, onSendMessage }: ChatPageProps) {
         <div className="border-b border-line bg-white px-5 py-4">
           <p className="text-xs font-medium text-emerald-700">完整学习对话</p>
           <h1 className="mt-1 text-lg font-semibold text-ink">围绕当前任务深入学习</h1>
-          <p className="subtle mt-1">这里保留完整上下文，适合连续提问、讲解、练习和复盘。</p>
+          <p className="subtle mt-1">可以直接提问，也可以选择一个学习动作开始。</p>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto bg-[#fbfaf7] p-5">
+          <div className="grid gap-2 rounded-[14px] border border-emerald-100 bg-white/90 p-3 sm:grid-cols-2">
+            {prompts.map((prompt) => (
+              <button
+                key={prompt}
+                className="rounded-ui border border-line bg-slate-50 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                onClick={() => send(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
           {task.messages.length === 0 ? (
             <div className="rounded-ui border border-line bg-slate-50 p-5">
               <h3 className="font-semibold text-ink">可以这样开始</h3>
@@ -95,7 +108,7 @@ export function ChatPage({ task, onSendMessage }: ChatPageProps) {
               onChange={(event) => setText(event.target.value)}
               placeholder="输入问题，或说出你想怎么学"
             />
-            <Button variant="primary" className="h-10" icon={<Send size={16} />}>
+            <Button variant="primary" className="h-10" icon={<Send size={16} />} loading={isSending}>
               发送
             </Button>
           </div>
@@ -109,16 +122,12 @@ export function ChatPage({ task, onSendMessage }: ChatPageProps) {
           <p className="mt-3 text-sm leading-6 text-slate-700">{task.reason}</p>
         </div>
         <div className="rounded-[16px] border border-slate-200 bg-white p-5">
-          <h2 className="section-title">推荐提问</h2>
-          <div className="mt-3 grid gap-2">
-            {prompts.map((prompt) => (
-              <button
-                key={prompt}
-                className="rounded-ui border border-line bg-white px-3 py-2 text-left text-sm text-muted hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
-                onClick={() => send(prompt)}
-              >
-                {prompt}
-              </button>
+          <h2 className="section-title">学习依据</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {task.profileTags.slice(0, 6).map((tag) => (
+              <span key={tag} className="rounded-full border border-line bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
+                {tag}
+              </span>
             ))}
           </div>
         </div>

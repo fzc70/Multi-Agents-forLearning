@@ -1,265 +1,167 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "./layout/AppLayout";
-import { initialTasks } from "../shared/mock/tasks";
 import type { LearningResource, LearningTask, NewTaskInput, PageKey } from "../shared/types/task";
 import { Toast } from "../shared/components/Toast";
 import { AssessmentPage } from "../features/assessment/AssessmentPage";
 import { ChatPage } from "../features/chat/ChatPage";
 import { LearningPathPage } from "../features/learning-path/LearningPathPage";
+import { ProfilePage } from "../features/profile/ProfilePage";
 import { ResourcesPage } from "../features/resources/ResourcesPage";
 import { TasksPage } from "../features/tasks/TasksPage";
+import { api } from "../shared/api/client";
 
-const resourceDefaults: LearningResource["type"][] = ["讲解文档", "练习题", "思维导图", "拓展阅读"];
-type BusyAction = "resource" | "path" | "assessment" | null;
-
-function makeId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`;
-}
-
-function makeAssistantReply(task: LearningTask) {
-  return `好的。围绕“${task.title}”，建议先完成“${task.nextAction}”。如果你愿意，我可以继续给你拆成一个 10 分钟内能完成的小练习。`;
-}
-
-function createTask(input: NewTaskInput): LearningTask {
-  const title = input.title.trim();
-  return {
-    id: makeId("task"),
-    title,
-    category: "自定义",
-    progress: 0,
-    updatedAt: "刚刚",
-    nextAction: input.expectedOutcome || "先通过对话明确目标和当前基础",
-    reason: input.foundation
-      ? `你提到当前基础是“${input.foundation}”，建议先从小目标开始。`
-      : "新任务已创建，建议先用几轮对话明确目标、基础和偏好。",
-    profileTags: ["新任务", "画像待完善", "资料可选", input.foundation || "基础待了解"],
-    materialsCount: 0,
-    exerciseCount: 0,
-    resources: [],
-    path: [
-      {
-        id: makeId("step"),
-        title: "明确学习目标",
-        objective: "把目标拆成可执行的小步骤。",
-        resource: "对话澄清",
-        exercise: "回答 3 个目标问题",
-        status: "current"
-      },
-      {
-        id: makeId("step"),
-        title: "评估当前基础",
-        objective: "了解已经掌握什么、卡在哪里。",
-        resource: "小测评",
-        exercise: "完成一次基础测评",
-        status: "todo"
-      },
-      {
-        id: makeId("step"),
-        title: "生成学习资源",
-        objective: "围绕当前薄弱点生成资料和练习。",
-        resource: "个性化资源",
-        exercise: "完成第一组练习",
-        status: "todo"
-      }
-    ],
-    assessment: {
-      score: 0,
-      mastery: "暂未评估",
-      weakPoints: [],
-      mistakeTypes: [],
-      effort: "暂无记录",
-      nextSuggestion: "先完成一次小测评，建立初始学习画像。",
-      tested: false
-    },
-    messages: [
-      {
-        id: makeId("msg"),
-        role: "assistant",
-        content: `新任务已创建。你可以先告诉我：学习“${title}”的目标、当前基础和希望多久看到效果。`
-      }
-    ]
-  };
-}
+type BusyAction = "loading" | "chat" | "upload" | "resource" | "path" | "assessment" | null;
 
 export default function App() {
   const [page, setPage] = useState<PageKey>("tasks");
-  const [tasks, setTasks] = useState<LearningTask[]>(initialTasks);
-  const [selectedTaskId, setSelectedTaskId] = useState(initialTasks[0]?.id ?? "");
+  const [tasks, setTasks] = useState<LearningTask[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState("");
   const [toast, setToast] = useState("");
-  const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const [busyAction, setBusyAction] = useState<BusyAction>("loading");
   const toastTimerRef = useRef<number | null>(null);
 
   const selectedTask = useMemo(() => {
-    return tasks.find((task) => task.id === selectedTaskId) ?? tasks[0];
+    return tasks.find((task) => task.id === selectedTaskId) ?? tasks[0] ?? null;
   }, [selectedTaskId, tasks]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, []);
+
+  async function loadTasks() {
+    try {
+      setBusyAction("loading");
+      const nextTasks = await api.listTasks();
+      setTasks(nextTasks);
+      setSelectedTaskId((current) => current || nextTasks[0]?.id || "");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "后端连接失败");
+    } finally {
+      setBusyAction(null);
+    }
+  }
 
   function showToast(message: string) {
     if (toastTimerRef.current) {
       window.clearTimeout(toastTimerRef.current);
     }
     setToast(message);
-    toastTimerRef.current = window.setTimeout(() => setToast(""), 1800);
+    toastTimerRef.current = window.setTimeout(() => setToast(""), 2200);
   }
 
-  function updateTask(taskId: string, updater: (task: LearningTask) => LearningTask) {
-    setTasks((current) => current.map((task) => (task.id === taskId ? updater(task) : task)));
+  function replaceTask(task: LearningTask) {
+    setTasks((current) => {
+      const exists = current.some((item) => item.id === task.id);
+      return exists ? current.map((item) => (item.id === task.id ? task : item)) : [task, ...current];
+    });
+    setSelectedTaskId(task.id);
   }
 
-  function runBusy(action: Exclude<BusyAction, null>, pendingMessage: string, done: () => void) {
+  async function withBusy(action: Exclude<BusyAction, null>, pendingMessage: string, work: () => Promise<void>) {
     if (busyAction) {
       showToast("上一个操作还在处理中");
       return;
     }
-    setBusyAction(action);
-    showToast(pendingMessage);
-    window.setTimeout(() => {
-      done();
+    try {
+      setBusyAction(action);
+      showToast(pendingMessage);
+      await work();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "操作失败");
+    } finally {
       setBusyAction(null);
-    }, 700);
+    }
   }
 
-  function handleCreateTask(input: NewTaskInput) {
-    const task = createTask(input);
-    setTasks((current) => [task, ...current]);
-    setSelectedTaskId(task.id);
-    showToast("学习任务已创建");
-  }
-
-  function handleSendMessage(message: string) {
-    if (!selectedTask) return;
-    updateTask(selectedTask.id, (task) => ({
-      ...task,
-      updatedAt: "刚刚",
-      messages: [
-        ...task.messages,
-        { id: makeId("msg"), role: "user", content: message },
-        { id: makeId("msg"), role: "assistant", content: makeAssistantReply(task) }
-      ]
-    }));
-    showToast("已发送");
-  }
-
-  function handleGenerateResource(type?: LearningResource["type"]) {
-    if (!selectedTask) return;
-    const resourceType = type ?? resourceDefaults[selectedTask.resources.length % resourceDefaults.length];
-    runBusy("resource", "正在生成学习资源...", () => {
-      updateTask(selectedTask.id, (task) => ({
-        ...task,
-        updatedAt: "刚刚",
-        resources: [
-          {
-            id: makeId("res"),
-            type: resourceType,
-            title: `${task.title} · ${resourceType}`,
-            description: `根据当前任务和下一步建议生成，重点服务“${task.nextAction}”。`
-          },
-          ...task.resources
-        ]
-      }));
-      showToast("已生成 1 个学习资源");
+  async function handleCreateTask(input: NewTaskInput) {
+    await withBusy("loading", "正在创建学习任务...", async () => {
+      const task = await api.createTask(input);
+      replaceTask(task);
+      showToast("学习任务已创建");
     });
   }
 
-  function handleGenerateSelectedResources(types: LearningResource["type"][]) {
+  async function handleSendMessage(message: string) {
+    if (!selectedTask) return;
+    await withBusy("chat", "正在生成回复...", async () => {
+      const result = await api.sendMessage(selectedTask.id, message);
+      replaceTask(result.task);
+      showToast(result.grounded ? "已结合学习资料回答" : "已回复");
+    });
+  }
+
+  async function handleUploadMaterial(file: File) {
+    if (!selectedTask) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      showToast("当前只支持上传 PDF");
+      return;
+    }
+    await withBusy("upload", "正在解析学习资料...", async () => {
+      const task = await api.uploadMaterial(selectedTask.id, file);
+      replaceTask(task);
+      showToast("学习资料已解析");
+    });
+  }
+
+  async function handleGenerateResource(type?: LearningResource["type"]) {
+    if (!selectedTask) return;
+    await withBusy("resource", "正在生成学习资源...", async () => {
+      const result = await api.generateResources(selectedTask.id, type ? "selected" : "smart", type ? [type] : undefined);
+      replaceTask(result.task);
+      showToast(`已生成 ${result.resources.length} 个学习资源`);
+    });
+  }
+
+  async function handleGenerateResourceAndOpen(type?: LearningResource["type"]) {
+    setPage("resources");
+    await handleGenerateResource(type);
+  }
+
+  async function handleGenerateSelectedResources(types: LearningResource["type"][]) {
     if (!selectedTask || types.length === 0) return;
-    runBusy("resource", "正在生成所选资源...", () => {
-      updateTask(selectedTask.id, (task) => ({
-        ...task,
-        updatedAt: "刚刚",
-        resources: [
-          ...types.map((type) => ({
-            id: makeId("res"),
-            type,
-            title: `${task.title} · ${type}`,
-            description: `由你指定生成，重点服务“${task.nextAction}”。`
-          })),
-          ...task.resources
-        ]
-      }));
-      showToast(`已生成 ${types.length} 个学习资源`);
+    await withBusy("resource", "正在生成所选资源...", async () => {
+      const result = await api.generateResources(selectedTask.id, "selected", types);
+      replaceTask(result.task);
+      showToast(`已生成 ${result.resources.length} 个学习资源`);
     });
+  }
+
+  async function handleGenerateSelectedResourcesAndOpen(types: LearningResource["type"][]) {
+    setPage("resources");
+    await handleGenerateSelectedResources(types);
   }
 
   function handleUseResource(resource: LearningResource, action: "path" | "start") {
+    if (!selectedTask) return;
     if (action === "path") {
-      showToast(`已将「${resource.title}」加入学习路径`);
+      void withBusy("path", "正在加入学习路径...", async () => {
+        const task = await api.attachResourceToPath(selectedTask.id, resource.id);
+        replaceTask(task);
+        setPage("path");
+        showToast(`已将「${resource.title}」加入当前阶段`);
+      });
       return;
     }
-    showToast(`开始使用「${resource.title}」`);
+    setPage("chat");
+    void handleSendMessage(`开始使用资源：${resource.title}`);
   }
 
-  function handleAdjustPath() {
+  async function handleAdjustPath() {
     if (!selectedTask) return;
-    runBusy("path", "正在调整学习路径...", () => {
-      updateTask(selectedTask.id, (task) => ({
-        ...task,
-        updatedAt: "刚刚",
-        path: task.path.map((step, index) => ({
-          ...step,
-          status: index === 0 ? "done" : index === 1 ? "current" : "todo"
-        })),
-        nextAction: task.path[1]?.title ? `继续完成：${task.path[1].title}` : task.nextAction,
-        pathAdjustmentNote:
-          "已根据当前进度、最近练习表现和薄弱点重新确认优先级：保留已完成阶段，将当前阶段聚焦到最影响学习效果的一步。"
-      }));
+    await withBusy("path", "正在调整学习路径...", async () => {
+      const task = await api.adjustPath(selectedTask.id, "根据当前学习进度和最近反馈调整");
+      replaceTask(task);
       showToast("学习路径已调整");
     });
   }
 
-  function handleStartAssessment() {
+  async function handleStartAssessment() {
     if (!selectedTask) return;
-    runBusy("assessment", "正在分析测评结果...", () => {
-      updateTask(selectedTask.id, (task) => ({
-        ...task,
-        updatedAt: "刚刚",
-        progress: Math.min(100, task.progress + 4),
-        exerciseCount: task.exerciseCount + 1,
-        assessment: {
-          ...task.assessment,
-          tested: true,
-          score: Math.min(100, Math.max(62, task.assessment.score + 3)),
-          mastery: task.assessment.mastery === "暂未评估" ? "已完成初始测评，建议继续小步练习" : task.assessment.mastery,
-          weakPoints: task.assessment.weakPoints.length ? task.assessment.weakPoints : ["基础概念不够稳定", "方法选择需要练习"],
-          mistakeTypes: task.assessment.mistakeTypes.length ? task.assessment.mistakeTypes : ["步骤遗漏", "理解不完整"],
-          effort: "刚完成 1 次测评",
-          nextSuggestion: `建议继续完成“${task.nextAction}”，再复盘错误原因。`
-        }
-      }));
-      showToast("测评结果已更新");
+    await withBusy("assessment", "正在生成评估结果...", async () => {
+      const task = await api.runAssessment(selectedTask.id);
+      replaceTask(task);
+      showToast("评估结果已更新");
     });
-  }
-
-  function handleContextAction() {
-    if (page === "resources") handleGenerateResource();
-    if (page === "path") handleAdjustPath();
-    if (page === "assessment") handleStartAssessment();
-    if (page === "chat") showToast("可以在对话框继续提问");
-  }
-
-  if (!selectedTask) {
-    return (
-      <AppLayout
-        page="tasks"
-        task={createTask({ title: "新学习任务" })}
-        tasks={[]}
-        onPageChange={setPage}
-        onTaskChange={setSelectedTaskId}
-        onContextAction={handleContextAction}
-        onAssistantSend={handleSendMessage}
-        busyAction={busyAction}
-      >
-        <TasksPage
-          tasks={[]}
-          selectedTask={createTask({ title: "新学习任务" })}
-          onSelectTask={setSelectedTaskId}
-          onCreateTask={handleCreateTask}
-          onPageChange={setPage}
-          onSmartGenerateResource={() => handleGenerateResource()}
-          onGenerateSelectedResources={handleGenerateSelectedResources}
-          isGeneratingResource={busyAction === "resource"}
-        />
-      </AppLayout>
-    );
   }
 
   return (
@@ -267,49 +169,63 @@ export default function App() {
       page={page}
       task={selectedTask}
       tasks={tasks}
-      onPageChange={setPage}
+      onPageChange={(nextPage) => {
+        if (!selectedTask && nextPage !== "tasks") {
+          showToast("请先创建学习任务");
+          setPage("tasks");
+          return;
+        }
+        setPage(nextPage);
+      }}
       onTaskChange={setSelectedTaskId}
-      onContextAction={handleContextAction}
       onAssistantSend={handleSendMessage}
-      busyAction={busyAction}
     >
       {page === "tasks" ? (
         <TasksPage
           tasks={tasks}
           selectedTask={selectedTask}
+          loading={busyAction === "loading"}
           onSelectTask={setSelectedTaskId}
           onCreateTask={handleCreateTask}
           onPageChange={setPage}
-          onSmartGenerateResource={() => handleGenerateResource()}
-          onGenerateSelectedResources={handleGenerateSelectedResources}
+          onUploadMaterial={handleUploadMaterial}
+          onSmartGenerateResource={() => handleGenerateResourceAndOpen()}
+          onGenerateSelectedResources={handleGenerateSelectedResourcesAndOpen}
           isGeneratingResource={busyAction === "resource"}
+          isUploadingMaterial={busyAction === "upload"}
         />
       ) : null}
-      {page === "chat" ? <ChatPage task={selectedTask} onSendMessage={handleSendMessage} /> : null}
-      {page === "resources" ? (
+      {selectedTask && page === "chat" ? (
+        <ChatPage task={selectedTask} onSendMessage={handleSendMessage} isSending={busyAction === "chat"} />
+      ) : null}
+      {selectedTask && page === "profile" ? <ProfilePage task={selectedTask} /> : null}
+      {selectedTask && page === "resources" ? (
         <ResourcesPage
           task={selectedTask}
+          onUploadMaterial={handleUploadMaterial}
           onGenerateResource={handleGenerateResource}
           onGenerateSelectedResources={handleGenerateSelectedResources}
           onUseResource={handleUseResource}
           isGeneratingResource={busyAction === "resource"}
+          isUploadingMaterial={busyAction === "upload"}
         />
       ) : null}
-      {page === "path" ? (
+      {selectedTask && page === "path" ? (
         <LearningPathPage
           task={selectedTask}
-          onGenerateResource={handleGenerateResource}
+          onAdjustPath={handleAdjustPath}
+          onGenerateResource={handleGenerateResourceAndOpen}
           onStartAssessment={handleStartAssessment}
           isAdjustingPath={busyAction === "path"}
           isAssessing={busyAction === "assessment"}
           isGeneratingResource={busyAction === "resource"}
         />
       ) : null}
-      {page === "assessment" ? (
+      {selectedTask && page === "assessment" ? (
         <AssessmentPage
           task={selectedTask}
           onStartAssessment={handleStartAssessment}
-          onGenerateResource={handleGenerateResource}
+          onGenerateResource={handleGenerateResourceAndOpen}
           isAssessing={busyAction === "assessment"}
         />
       ) : null}

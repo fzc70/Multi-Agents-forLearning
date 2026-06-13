@@ -1,4 +1,4 @@
-export type PageKey = "tasks" | "chat" | "resources" | "path" | "assessment";
+export type PageKey = "tasks" | "profile" | "chat" | "resources" | "path" | "assessment";
 
 export type Message = {
   id: string;
@@ -20,6 +20,17 @@ export type LearningResource = {
   type: "讲解文档" | "练习题" | "思维导图" | "拓展阅读" | "视频脚本" | "代码案例" | "知识图谱";
   title: string;
   description: string;
+  content?: string;
+  recommendationReason?: string;
+  sourceRefs?: SourceRef[];
+};
+
+export type SourceRef = {
+  type: string;
+  id: string;
+  title?: string;
+  page?: number;
+  chunkId?: string;
 };
 
 export type Assessment = {
@@ -32,6 +43,32 @@ export type Assessment = {
   tested: boolean;
 };
 
+export type ProfileDimension = {
+  id: string;
+  label: string;
+  value: string;
+  confidence: number;
+  evidence: string;
+  updatedAt: string;
+};
+
+export type StudentProfile = {
+  summary: string;
+  dimensions: ProfileDimension[];
+  recentEvidences: string[];
+};
+
+export type LearningMaterial = {
+  id: string;
+  name: string;
+  type: "PDF" | "文档" | "网页" | "笔记";
+  size: string;
+  status: "已解析" | "解析中" | "待处理";
+  textLength: number;
+  usedFor: string[];
+  updatedAt: string;
+};
+
 export type LearningTask = {
   id: string;
   title: string;
@@ -41,6 +78,8 @@ export type LearningTask = {
   nextAction: string;
   reason: string;
   profileTags: string[];
+  profile?: StudentProfile;
+  materials?: LearningMaterial[];
   materialsCount: number;
   exerciseCount: number;
   resources: LearningResource[];

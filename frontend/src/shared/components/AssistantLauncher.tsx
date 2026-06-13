@@ -11,6 +11,7 @@ type AssistantLauncherProps = {
 export function AssistantLauncher({ task, onSend }: AssistantLauncherProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [showHint, setShowHint] = useState(true);
   const guideQuestions = [
     "解释一下当前页面",
     "我下一步点哪里？",
@@ -29,12 +30,27 @@ export function AssistantLauncher({ task, onSend }: AssistantLauncherProps) {
     <>
       <button
         className="fixed bottom-7 right-7 z-30 grid h-14 w-14 place-items-center rounded-2xl border border-emerald-200 bg-white text-emerald-800 shadow-soft transition hover:-translate-y-0.5 hover:bg-emerald-50"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          setShowHint(false);
+        }}
         aria-label="打开学习助手"
       >
         <BookOpen size={22} />
         <Sparkles className="absolute right-2 top-2 text-emerald-300" size={13} />
       </button>
+
+      {!open && showHint ? (
+        <button
+          className="fixed bottom-9 right-24 z-30 rounded-full border border-emerald-100 bg-white px-3 py-2 text-xs text-emerald-800 shadow-soft transition hover:bg-emerald-50"
+          onClick={() => {
+            setOpen(true);
+            setShowHint(false);
+          }}
+        >
+          有问题可以问我
+        </button>
+      ) : null}
 
       {open ? (
         <div className="fixed inset-y-0 right-0 z-40 flex w-[440px] flex-col border-l border-slate-200 bg-white shadow-soft">

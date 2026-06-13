@@ -1,25 +1,30 @@
-import { ArrowRight, BookOpen, Route, Sparkles } from "lucide-react";
+import { BookOpen, Sparkles } from "lucide-react";
 import { useState } from "react";
-import type { LearningResource, LearningTask, PageKey } from "../../shared/types/task";
+import type { LearningResource, LearningTask } from "../../shared/types/task";
 import { Button } from "../../shared/components/Button";
 import { ResourceGenerationModal } from "../../shared/components/ResourceGenerationModal";
+import { getPathProgress } from "../../shared/utils/progress";
+import { MaterialsPanel } from "../materials/MaterialsPanel";
 
 type TaskDetailProps = {
   task: LearningTask;
-  onPageChange: (page: PageKey) => void;
+  onUploadMaterial: (file: File) => void;
   onSmartGenerateResource: () => void;
   onGenerateSelectedResources: (types: LearningResource["type"][]) => void;
   isGeneratingResource: boolean;
+  isUploadingMaterial: boolean;
 };
 
 export function TaskDetail({
   task,
-  onPageChange,
+  onUploadMaterial,
   onSmartGenerateResource,
   onGenerateSelectedResources,
-  isGeneratingResource
+  isGeneratingResource,
+  isUploadingMaterial
 }: TaskDetailProps) {
   const [generateOpen, setGenerateOpen] = useState(false);
+  const progress = getPathProgress(task);
 
   return (
     <>
@@ -27,7 +32,7 @@ export function TaskDetail({
       <div className="border-b border-line bg-white px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs text-muted">当前选中任务</p>
+            <p className="text-xs text-muted">任务详情</p>
             <h2 className="mt-1 text-xl font-semibold text-ink">{task.title}</h2>
           </div>
           <div className="flex gap-4 text-right text-xs text-muted">
@@ -37,22 +42,16 @@ export function TaskDetail({
           </div>
         </div>
         <div className="mt-4 h-1.5 rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${task.progress}%` }} />
+          <div className="h-full rounded-full bg-emerald-600" style={{ width: `${progress.percent}%` }} />
         </div>
       </div>
 
       <div className="grid gap-5 p-5">
         <section className="rounded-[14px] border border-emerald-100 bg-emerald-50/70 p-5">
-          <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700">下一步建议</span>
+          <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-medium text-emerald-700">建议动作</span>
           <h3 className="mt-3 text-lg font-semibold text-ink">{task.nextAction}</h3>
           <p className="mt-2 text-sm leading-6 text-muted">{task.reason}</p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Button variant="primary" icon={<ArrowRight size={16} />} onClick={() => onPageChange("chat")}>
-              继续学习
-            </Button>
-            <Button icon={<Route size={16} />} onClick={() => onPageChange("path")}>
-              查看路径
-            </Button>
             <Button icon={<Sparkles size={16} />} onClick={() => setGenerateOpen(true)}>
               生成资源
             </Button>
@@ -82,16 +81,7 @@ export function TaskDetail({
           </div>
         </section>
 
-        <section>
-          <h3 className="section-title">个性化依据</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {task.profileTags.map((tag) => (
-              <span key={tag} className="rounded-full border border-line bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
-                {tag}
-              </span>
-            ))}
-          </div>
-        </section>
+        <MaterialsPanel task={task} onUploadMaterial={onUploadMaterial} compact isUploading={isUploadingMaterial} />
       </div>
     </div>
 

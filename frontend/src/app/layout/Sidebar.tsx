@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Compass, FolderOpen, GraduationCap, MessageCircle, Sparkles } from "lucide-react";
+import { BarChart3, BookOpen, Compass, FolderOpen, GraduationCap, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import type { PageKey } from "../../shared/types/task";
 
 type SidebarProps = {
@@ -8,6 +8,7 @@ type SidebarProps = {
 
 const items: Array<{ key: PageKey; label: string; icon: typeof BookOpen }> = [
   { key: "tasks", label: "任务", icon: Compass },
+  { key: "profile", label: "画像", icon: UserRound },
   { key: "chat", label: "对话", icon: MessageCircle },
   { key: "resources", label: "资源", icon: FolderOpen },
   { key: "path", label: "路径", icon: BookOpen },
