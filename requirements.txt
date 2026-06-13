@@ -22,6 +22,8 @@ sentence-transformers>=2.2.0
 # ===== Phase 2: Knowledge Graph =====
 networkx>=3.0
 pyvis>=0.3.0
+python-multipart>=0.0.9
+pypdf>=4.0.0
 plotly>=5.18.0
 transformers>=4.36.0
 torch>=2.0.0
