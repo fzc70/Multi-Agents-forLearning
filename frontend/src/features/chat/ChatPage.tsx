@@ -1,0 +1,128 @@
+import { FormEvent, useState } from "react";
+import { BookOpen, Send, UserRound } from "lucide-react";
+import type { LearningTask } from "../../shared/types/task";
+import { Button } from "../../shared/components/Button";
+
+type ChatPageProps = {
+  task: LearningTask;
+  onSendMessage: (message: string) => void;
+};
+
+const prompts = ["我应该从哪里开始？", "帮我制定今天的学习计划", "给我一道适合当前水平的练习"];
+
+export function ChatPage({ task, onSendMessage }: ChatPageProps) {
+  const [text, setText] = useState("");
+
+  function send(value: string) {
+    const message = value.trim();
+    if (!message) return;
+    onSendMessage(message);
+    setText("");
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    send(text);
+  }
+
+  return (
+    <div className="grid grid-cols-[1fr_300px] gap-5">
+      <section className="flex min-h-[640px] flex-col overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-line bg-white px-5 py-4">
+          <p className="text-xs font-medium text-emerald-700">完整学习对话</p>
+          <h1 className="mt-1 text-lg font-semibold text-ink">围绕当前任务深入学习</h1>
+          <p className="subtle mt-1">这里保留完整上下文，适合连续提问、讲解、练习和复盘。</p>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto bg-[#fbfaf7] p-5">
+          {task.messages.length === 0 ? (
+            <div className="rounded-ui border border-line bg-slate-50 p-5">
+              <h3 className="font-semibold text-ink">可以这样开始</h3>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {prompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    className="rounded-full border border-line bg-white px-3 py-1.5 text-sm text-muted hover:border-emerald-200 hover:text-emerald-800"
+                    onClick={() => send(prompt)}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            task.messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {message.role === "assistant" ? (
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui border border-emerald-100 bg-emerald-50 text-emerald-800">
+                    <BookOpen size={16} />
+                  </div>
+                ) : null}
+
+                <div className={`max-w-[68%] ${message.role === "user" ? "order-1" : ""}`}>
+                  <div className={`mb-1 text-xs ${message.role === "user" ? "text-right text-muted" : "text-muted"}`}>
+                    {message.role === "user" ? "我" : "学习助手"}
+                  </div>
+                  <div
+                    className={`w-fit whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
+                      message.role === "user"
+                        ? "ml-auto rounded-tr-md bg-emerald-700 text-white"
+                        : "rounded-tl-md border border-slate-200 bg-white text-ink"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+
+                {message.role === "user" ? (
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui bg-emerald-100 text-emerald-800">
+                    <UserRound size={16} />
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+
+        <form className="border-t border-line bg-white p-4" onSubmit={handleSubmit}>
+          <div className="flex gap-2 rounded-[12px] border border-slate-200 bg-slate-50 p-1">
+            <input
+              className="h-10 flex-1 bg-transparent px-3 text-sm outline-none"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="输入问题，或说出你想怎么学"
+            />
+            <Button variant="primary" className="h-10" icon={<Send size={16} />}>
+              发送
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      <aside className="space-y-4">
+        <div className="rounded-[16px] border border-emerald-100 bg-emerald-50/80 p-5">
+          <p className="text-xs font-medium text-emerald-700">当前建议</p>
+          <h2 className="mt-2 text-base font-semibold text-ink">先做一个小步骤</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-700">{task.reason}</p>
+        </div>
+        <div className="rounded-[16px] border border-slate-200 bg-white p-5">
+          <h2 className="section-title">推荐提问</h2>
+          <div className="mt-3 grid gap-2">
+            {prompts.map((prompt) => (
+              <button
+                key={prompt}
+                className="rounded-ui border border-line bg-white px-3 py-2 text-left text-sm text-muted hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+                onClick={() => send(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}

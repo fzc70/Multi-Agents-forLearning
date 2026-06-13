@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>多智能体个性化学习助手 - 原型</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-soft: #f9fbfd;
+      --text: #172033;
+      --muted: #687386;
+      --line: #e4e9f1;
+      --primary: #2563eb;
+      --primary-soft: #eaf1ff;
+      --green: #16a34a;
+      --green-soft: #e9f8ef;
+      --amber: #d97706;
+      --amber-soft: #fff4df;
+      --danger: #dc2626;
+      --shadow: 0 14px 36px rgba(20, 35, 70, 0.06);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background: var(--bg);
+      font-family: "Inter", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      padding: 18px 10px;
+      background: #ffffff;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: #1e293b;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .nav {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      padding: 10px 4px;
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: transparent;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      transition: 0.16s ease;
+    }
+
+    .nav-btn span:first-child {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+    }
+
+    .nav-btn span:last-child {
+      font-size: 12px;
+    }
+
+    .nav-btn.active,
+    .nav-btn:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .main {
+      min-width: 0;
+      padding: 24px 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.25;
+      font-weight: 720;
+    }
+
+    .title-block p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search {
+      width: 260px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 13px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: #a9c3ff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .btn {
+      height: 40px;
+      border-radius: var(--radius);
+      padding: 0 14px;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: 0.16s ease;
+    }
+
+    .btn:hover {
+      border-color: #c7d2e5;
+      transform: translateY(-1px);
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn.ghost {
+      background: transparent;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.9fr) minmax(520px, 1.25fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 720;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .task-list {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .task-item {
+      width: 100%;
+      text-align: left;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: transparent;
+      border: 1px solid transparent;
+      transition: 0.16s ease;
+    }
+
+    .task-item:hover,
+    .task-item.active {
+      background: var(--surface-soft);
+      border-color: var(--line);
+    }
+
+    .task-item.active {
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+
+    .task-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .task-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .task-next {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .badge {
+      white-space: nowrap;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .progress {
+      margin-top: 12px;
+      height: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #edf1f6;
+    }
+
+    .progress > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2563eb, #14b8a6);
+    }
+
+    .detail {
+      min-height: 660px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-body {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .focus {
+      padding: 18px;
+      border-radius: var(--radius);
+      background: #f8fbff;
+      border: 1px solid #dce8ff;
+      display: grid;
+      gap: 12px;
+    }
+
+    .focus h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .focus p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .summary {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+      min-height: 128px;
+    }
+
+    .summary-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .summary strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+
+    .summary p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .path {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .path-step {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      gap: 12px;
+      align-items: start;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .path-step:last-child {
+      border-bottom: 0;
+    }
+
+    .num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      color: var(--muted);
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .path-step.current .num {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .path-step h4 {
+      margin: 0 0 4px;
+      font-size: 14px;
+    }
+
+    .path-step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--green);
+      background: var(--green-soft);
+      padding: 4px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      color: #334155;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 6px 9px;
+      font-size: 12px;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: grid;
+      gap: 16px;
+    }
+
+    .chat-box {
+      height: 390px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 6px;
+    }
+
+    .message {
+      max-width: 78%;
+      padding: 11px 13px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.55;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .message.ai {
+      align-self: flex-start;
+      background: var(--surface-soft);
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 10px;
+      padding-top: 4px;
+    }
+
+    .chat-input input,
+    .task-form input {
+      flex: 1;
+      height: 42px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      padding: 0 13px;
+      outline: none;
+    }
+
+    .chat-input input:focus,
+    .task-form input:focus {
+      border-color: #a9c3ff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .resource-list,
+    .assessment-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row-card {
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .row-card h4 {
+      margin: 0 0 4px;
+      font-size: 14px;
+    }
+
+    .row-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .assistant-bar {
+      margin-top: 18px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .assistant-bar input {
+      flex: 1;
+      height: 38px;
+      border: 0;
+      outline: none;
+      color: var(--text);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.28);
+      padding: 20px;
+      z-index: 20;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(460px, 100%);
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 26px 80px rgba(15, 23, 42, 0.2);
+      padding: 20px;
+    }
+
+    .dialog h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .dialog p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .task-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(18px);
+      opacity: 0;
+      pointer-events: none;
+      color: #fff;
+      background: #172033;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      transition: 0.18s ease;
+      box-shadow: var(--shadow);
+      z-index: 30;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 1080px) {
+      .workspace,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .top-actions,
+      .search {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 10px;
+      }
+
+      .brand {
+        margin: 0;
+      }
+
+      .nav {
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .nav-btn {
+        min-width: 58px;
+      }
+
+      .main {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">学</div>
+      <nav class="nav" id="nav">
+        <button class="nav-btn active" data-view="tasks"><span>任</span><span>任务</span></button>
+        <button class="nav-btn" data-view="chat"><span>问</span><span>对话</span></button>
+        <button class="nav-btn" data-view="resources"><span>资</span><span>资源</span></button>
+        <button class="nav-btn" data-view="path"><span>路</span><span>路径</span></button>
+        <button class="nav-btn" data-view="assessment"><span>评</span><span>评估</span></button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="title-block">
+          <h1 id="pageTitle">我的学习任务</h1>
+          <p id="pageSubtitle">选择一个任务，继续学习、生成资源或查看进度。</p>
+        </div>
+        <div class="top-actions">
+          <input class="search" id="searchInput" type="search" placeholder="搜索任务，例如 Python、写作、英语" />
+          <button class="btn primary" id="openCreate">新建学习任务</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>学习任务</h2>
+            <span class="hint" id="taskCount">4 个任务</span>
+          </div>
+          <div class="task-list" id="taskList"></div>
+        </section>
+
+        <section class="panel detail">
+          <div class="panel-head">
+            <h2 id="detailTitle">任务详情</h2>
+            <span class="badge" id="detailBadge">进行中</span>
+          </div>
+
+          <div class="detail-body">
+            <div class="view active" id="view-tasks"></div>
+            <div class="view" id="view-chat"></div>
+            <div class="view" id="view-resources"></div>
+            <div class="view" id="view-path"></div>
+            <div class="view" id="view-assessment"></div>
+          </div>
+        </section>
+      </section>
+
+      <form class="assistant-bar" id="quickAsk">
+        <span class="hint">学习助手</span>
+        <input id="quickAskInput" placeholder="问学习助手，例如：我今天应该先学什么？" />
+        <button class="btn" type="submit">发送</button>
+      </form>
+    </main>
+  </div>
+
+  <div class="modal" id="createModal" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <div class="dialog">
+      <h3 id="createTitle">新建学习任务</h3>
+      <p>输入你想学习的目标。系统会先创建任务，后续再通过对话、资料、练习逐步完善计划。</p>
+      <form class="task-form" id="createForm">
+        <input id="taskNameInput" placeholder="例如：学习现代文阅读答题技巧" required />
+        <input id="taskGoalInput" placeholder="学习目标，例如：两周内提升阅读题正确率" />
+        <div class="action-row">
+          <button class="btn primary" type="submit">创建任务</button>
+          <button class="btn" type="button" id="closeCreate">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已更新</div>
+
+  <script>
+    const state = {
+      activeView: "tasks",
+      selectedId: "writing",
+      query: "",
+      tasks: [
+        {
+          id: "writing",
+          title: "提升议论文写作能力",
+          category: "语文",
+          progress: 42,
+          next: "梳理论点表达，完成一段论证练习",
+          reason: "最近练习中论点明确性不足，适合先做结构化训练。",
+          path: ["明确中心论点", "学习分论点展开", "完成一段论证", "复盘表达问题"],
+          tags: ["基础中等", "偏好示例讲解", "薄弱点：论点明确性", "目标：作文提分"],
+          stats: { materials: 2, resources: 5, exercises: 8 },
+          score: 76,
+          weakness: ["论点不够集中", "例证和观点衔接弱"],
+          messages: [
+            { role: "ai", text: "今天建议先练“中心论点是否明确”。我可以先给你一个短讲解，再让你改写一段。" },
+            { role: "user", text: "我总是写着写着偏题。" },
+            { role: "ai", text: "可以。我们先用一句话锁定观点，再检查每个分论点是否服务这个观点。" }
+          ]
+        },
+        {
+          id: "python",
+          title: "掌握 Python 函数与循环",
+          category: "编程",
+          progress: 58,
+          next: "完成函数参数与 for 循环组合练习",
+          reason: "你已经理解基础语法，下一步适合用小题巩固函数拆分。",
+          path: ["复习循环语法", "理解函数参数", "完成列表处理练习", "写一个小型统计程序"],
+          tags: ["基础入门", "偏好代码示例", "薄弱点：函数拆分", "目标：能独立写小程序"],
+          stats: { materials: 1, resources: 4, exercises: 12 },
+          score: 81,
+          weakness: ["函数返回值", "循环边界条件"],
+          messages: [
+            { role: "ai", text: "我们今天可以用一个成绩统计例子，把 for 循环和函数放在一起练。" },
+            { role: "user", text: "我不太懂 return 什么时候用。" },
+            { role: "ai", text: "return 适合把函数计算结果交回给外部。我们用一个最小例子看。" }
+          ]
+        },
+        {
+          id: "english",
+          title: "英语四级阅读训练",
+          category: "英语",
+          progress: 35,
+          next: "训练定位关键词与长难句拆解",
+          reason: "当前主要问题是读得慢，先提升定位效率更合适。",
+          path: ["识别题干关键词", "定位原文信息", "拆解长难句", "完成限时阅读"],
+          tags: ["基础中等", "偏好题型训练", "薄弱点：长难句", "目标：阅读提速"],
+          stats: { materials: 3, resources: 6, exercises: 18 },
+          score: 69,
+          weakness: ["定位速度慢", "转折句理解不稳定"],
+          messages: [
+            { role: "ai", text: "今天建议先练关键词定位。你可以发一段阅读材料，我帮你拆题。" },
+            { role: "user", text: "我经常找不到答案在哪。" },
+            { role: "ai", text: "先从题干名词、时间、因果词入手，再回原文找同义替换。" }
+          ]
+        },
+        {
+          id: "math",
+          title: "高等数学极限",
+          category: "数学",
+          progress: 27,
+          next: "区分常见极限变形方法",
+          reason: "基础概念已经开始建立，下一步需要整理常见题型。",
+          path: ["理解极限定义", "掌握等价无穷小", "练习洛必达法则", "总结题型选择策略"],
+          tags: ["基础偏弱", "偏好步骤推导", "薄弱点：方法选择", "目标：会做基础题"],
+          stats: { materials: 1, resources: 3, exercises: 6 },
+          score: 62,
+          weakness: ["等价替换条件", "题型判断"],
+          messages: [
+            { role: "ai", text: "今天先不刷难题，建议整理三类常见极限方法的使用条件。" },
+            { role: "user", text: "我不知道什么时候用等价无穷小。" },
+            { role: "ai", text: "关键看变量是否趋近 0，以及替换后是否改变整体结构。" }
+          ]
+        }
+      ]
+    };
+
+    const taskList = document.getElementById("taskList");
+    const taskCount = document.getElementById("taskCount");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailBadge = document.getElementById("detailBadge");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const searchInput = document.getElementById("searchInput");
+    const toast = document.getElementById("toast");
+
+    function selectedTask() {
+      return state.tasks.find((task) => task.id === state.selectedId) || state.tasks[0];
+    }
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1600);
+    }
+
+    function setView(view) {
+      state.activeView = view;
+      document.querySelectorAll(".nav-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.view === view);
+      });
+      document.querySelectorAll(".view").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `view-${view}`);
+      });
+      renderDetail();
+    }
+
+    function filteredTasks() {
+      const query = state.query.trim().toLowerCase();
+      if (!query) return state.tasks;
+      return state.tasks.filter((task) =>
+        `${task.title} ${task.category} ${task.next}`.toLowerCase().includes(query)
+      );
+    }
+
+    function renderTaskList() {
+      const tasks = filteredTasks();
+      taskCount.textContent = `${tasks.length} 个任务`;
+      taskList.innerHTML = tasks.map((task) => `
+        <button class="task-item ${task.id === state.selectedId ? "active" : ""}" data-task-id="${task.id}">
+          <div class="task-row">
+            <div>
+              <div class="task-title">${task.title}</div>
+              <div class="task-next">${task.next}</div>
+            </div>
+            <span class="badge">${task.category}</span>
+          </div>
+          <div class="progress" aria-label="学习进度 ${task.progress}%">
+            <i style="width:${task.progress}%"></i>
+          </div>
+        </button>
+      `).join("") || `<div class="hint" style="padding:18px;">没有匹配的任务</div>`;
+
+      taskList.querySelectorAll(".task-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          state.selectedId = item.dataset.taskId;
+          render();
+        });
+      });
+    }
+
+    function renderTasksView(task) {
+      return `
+        <div class="focus">
+          <span class="badge">下一步建议</span>
+          <h3>${task.next}</h3>
+          <p>${task.reason}</p>
+          <div class="action-row">
+            <button class="btn primary" data-action="continue">继续学习</button>
+            <button class="btn" data-action="resource">生成资源</button>
+            <button class="btn" data-action="path">查看路径</button>
+            <button class="btn" data-action="assessment">开始测评</button>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary">
+            <div class="summary-title"><span>资料与资源</span><span>辅助</span></div>
+            <strong>${task.stats.materials + task.stats.resources}</strong>
+            <p>资料 ${task.stats.materials} 份 / 资源 ${task.stats.resources} 个 / 练习 ${task.stats.exercises} 题</p>
+          </article>
+          <article class="summary">
+            <div class="summary-title"><span>学习进度</span><span>${task.progress}%</span></div>
+            <strong>${task.path.length}</strong>
+            <p>当前路径包含 ${task.path.length} 个阶段，下一阶段会根据练习结果调整。</p>
+          </article>
+          <article class="summary">
+            <div class="summary-title"><span>学习评估</span><span>最近一次</span></div>
+            <strong>${task.score}</strong>
+            <p>主要薄弱点：${task.weakness.join("、")}。</p>
+          </article>
+        </div>
+
+        <section>
+          <div class="panel-head" style="padding:0 0 12px;border:0;">
+            <h2>当前路径</h2>
+            <span class="hint">精简展示，详情在路径页</span>
+          </div>
+          ${pathHtml(task, 3)}
+        </section>
+
+        <section>
+          <div class="panel-head" style="padding:0 0 12px;border:0;">
+            <h2>学习画像摘要</h2>
+            <span class="hint">依据对话和练习更新</span>
+          </div>
+          <div class="tags">${task.tags.map((tag) => `<span class="tag">${tag}</span>`).join("")}</div>
+        </section>
+      `;
+    }
+
+    function pathHtml(task, limit = task.path.length) {
+      return `
+        <div class="path">
+          ${task.path.slice(0, limit).map((step, index) => `
+            <div class="path-step ${index === Math.min(1, task.path.length - 1) ? "current" : ""}">
+              <span class="num">${index + 1}</span>
+              <div>
+                <h4>${step}</h4>
+                <p>${index === 0 ? "已完成基础铺垫" : index === 1 ? "当前建议优先完成" : "后续根据表现调整"}</p>
+              </div>
+              <span class="status">${index === 0 ? "已完成" : index === 1 ? "当前" : "待学习"}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderChatView(task) {
+      return `
+        <div class="focus">
+          <span class="badge">智能对话</span>
+          <h3>${task.title}</h3>
+          <p>你可以直接提问，也可以说出新的学习目标。系统会围绕当前任务组织回答和下一步建议。</p>
+        </div>
+        <div class="chat-box" id="chatBox">
+          ${task.messages.map((message) => `
+            <div class="message ${message.role === "user" ? "user" : "ai"}">${message.text}</div>
+          `).join("")}
+        </div>
+        <form class="chat-input" id="chatForm">
+          <input id="chatInput" placeholder="输入问题，或说出你想学什么" autocomplete="off" />
+          <button class="btn primary" type="submit">发送</button>
+        </form>
+      `;
+    }
+
+    function renderResourcesView(task) {
+      return `
+        <div class="focus">
+          <span class="badge">学习资源</span>
+          <h3>围绕“${task.title}”生成资源</h3>
+          <p>资料可以作为辅助输入，但不是必须条件。资源会根据当前任务、画像和学习进度生成。</p>
+          <div class="action-row">
+            <button class="btn primary" data-action="add-resource">生成讲解</button>
+            <button class="btn" data-action="add-resource">生成练习</button>
+            <button class="btn" data-action="add-material">添加资料</button>
+          </div>
+        </div>
+        <div class="resource-list">
+          ${["课程讲解", "针对性练习", "复盘摘要", "拓展阅读"].map((item, index) => `
+            <div class="row-card">
+              <div>
+                <h4>${item}</h4>
+                <p>${index === 0 ? task.next : "根据当前任务和薄弱点推荐，可继续细化。"}</p>
+              </div>
+              <span class="status">${index < task.stats.resources % 4 ? "已生成" : "可生成"}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderPathView(task) {
+      return `
+        <div class="focus">
+          <span class="badge">学习路径</span>
+          <h3>${task.title}</h3>
+          <p>路径不是一次性固定计划，会根据对话、资料、练习结果持续调整。</p>
+        </div>
+        ${pathHtml(task)}
+      `;
+    }
+
+    function renderAssessmentView(task) {
+      return `
+        <div class="focus">
+          <span class="badge">学习评估</span>
+          <h3>当前掌握度 ${task.score} 分</h3>
+          <p>评估来自练习表现、对话反馈和学习行为。这里先用静态数据模拟。</p>
+          <div class="action-row">
+            <button class="btn primary" data-action="improve-score">提交一次练习结果</button>
+          </div>
+        </div>
+        <div class="assessment-list">
+          ${task.weakness.map((item) => `
+            <div class="row-card">
+              <div>
+                <h4>${item}</h4>
+                <p>建议先通过讲解 + 小练习复盘，再进入下一阶段。</p>
+              </div>
+              <span class="status" style="color:var(--amber);background:var(--amber-soft);">需加强</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function bindDetailActions() {
+      document.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const task = selectedTask();
+          const action = button.dataset.action;
+          if (action === "continue") setView("chat");
+          if (action === "resource") setView("resources");
+          if (action === "path") setView("path");
+          if (action === "assessment") setView("assessment");
+          if (action === "add-resource") {
+            task.stats.resources += 1;
+            showToast("已模拟生成 1 个学习资源");
+            render();
+          }
+          if (action === "add-material") {
+            task.stats.materials += 1;
+            showToast("已模拟添加 1 份学习资料");
+            render();
+          }
+          if (action === "improve-score") {
+            task.score = Math.min(100, task.score + 3);
+            task.progress = Math.min(100, task.progress + 4);
+            showToast("已模拟提交练习，评估已刷新");
+            render();
+          }
+        });
+      });
+
+      const chatForm = document.getElementById("chatForm");
+      if (chatForm) {
+        chatForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const input = document.getElementById("chatInput");
+          const text = input.value.trim();
+          if (!text) return;
+          const task = selectedTask();
+          task.messages.push({ role: "user", text });
+          task.messages.push({ role: "ai", text: `收到。我们会围绕“${task.title}”继续推进，先把问题拆成一个可完成的小步骤。` });
+          input.value = "";
+          render();
+          setView("chat");
+          const chatBox = document.getElementById("chatBox");
+          if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        });
+      }
+    }
+
+    function renderDetail() {
+      const task = selectedTask();
+      detailTitle.textContent = task.title;
+      detailBadge.textContent = `${task.progress}%`;
+      pageTitle.textContent = state.activeView === "tasks" ? "我的学习任务" : task.title;
+      pageSubtitle.textContent = {
+        tasks: "选择一个任务，继续学习、生成资源或查看进度。",
+        chat: "通过自然语言提问，系统会围绕当前任务给出学习建议。",
+        resources: "生成讲解、练习、阅读材料等个性化资源。",
+        path: "查看当前学习路径和下一阶段安排。",
+        assessment: "查看掌握度、薄弱点和下一步建议。"
+      }[state.activeView];
+
+      document.getElementById("view-tasks").innerHTML = renderTasksView(task);
+      document.getElementById("view-chat").innerHTML = renderChatView(task);
+      document.getElementById("view-resources").innerHTML = renderResourcesView(task);
+      document.getElementById("view-path").innerHTML = renderPathView(task);
+      document.getElementById("view-assessment").innerHTML = renderAssessmentView(task);
+      bindDetailActions();
+    }
+
+    function render() {
+      renderTaskList();
+      renderDetail();
+      document.querySelectorAll(".view").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === `view-${state.activeView}`);
+      });
+    }
+
+    document.getElementById("nav").addEventListener("click", (event) => {
+      const button = event.target.closest(".nav-btn");
+      if (button) setView(button.dataset.view);
+    });
+
+    searchInput.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      renderTaskList();
+    });
+
+    document.getElementById("openCreate").addEventListener("click", () => {
+      document.getElementById("createModal").classList.add("open");
+      document.getElementById("taskNameInput").focus();
+    });
+
+    document.getElementById("closeCreate").addEventListener("click", () => {
+      document.getElementById("createModal").classList.remove("open");
+    });
+
+    document.getElementById("createModal").addEventListener("click", (event) => {
+      if (event.target.id === "createModal") {
+        event.currentTarget.classList.remove("open");
+      }
+    });
+
+    document.getElementById("createForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = document.getElementById("taskNameInput").value.trim();
+      const goal = document.getElementById("taskGoalInput").value.trim();
+      if (!name) return;
+      const id = `task_${Date.now()}`;
+      state.tasks.unshift({
+        id,
+        title: name,
+        category: "自定义",
+        progress: 0,
+        next: goal || "先通过对话明确学习目标和当前基础",
+        reason: "新任务已创建，建议先用几轮对话明确目标、基础和偏好。",
+        path: ["明确学习目标", "评估当前基础", "生成学习资源", "完成第一次测评"],
+        tags: ["新任务", "待完善画像", "资料可选", "目标待细化"],
+        stats: { materials: 0, resources: 0, exercises: 0 },
+        score: 0,
+        weakness: ["暂未评估"],
+        messages: [
+          { role: "ai", text: "新任务已创建。你可以先告诉我：你为什么想学、现在基础如何、希望多久看到效果。" }
+        ]
+      });
+      state.selectedId = id;
+      state.activeView = "tasks";
+      document.getElementById("createModal").classList.remove("open");
+      event.target.reset();
+      showToast("学习任务已创建");
+      render();
+      setView("tasks");
+    });
+
+    document.getElementById("quickAsk").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = document.getElementById("quickAskInput");
+      const text = input.value.trim();
+      if (!text) return;
+      const task = selectedTask();
+      task.messages.push({ role: "user", text });
+      task.messages.push({ role: "ai", text: "我会结合当前任务给出建议。你也可以进入对话页继续细化。" });
+      input.value = "";
+      showToast("问题已发送到当前任务");
+      setView("chat");
+    });
+
+    render();
+  </script>
+</body>
+</html>
