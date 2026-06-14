@@ -12,6 +12,7 @@ from app.schemas.api import (
     AttachResourceRequest,
     ChatRequest,
     ChatResponse,
+    CompleteStepRequest,
     CreateTaskRequest,
     GenerateResourceRequest,
     GenerateResourceResponse,
@@ -21,6 +22,7 @@ from app.schemas.api import (
     LearningMaterial,
     LearningTask,
     LearningResource,
+    ResourceMasteryRequest,
     SubmitExerciseRequest,
     SubmitExerciseResponse,
 )
@@ -89,6 +91,11 @@ def get_task(task_id: str) -> dict:
     return TaskService().get_task(task_id)
 
 
+@v1.delete("/tasks/{task_id}")
+def delete_task(task_id: str) -> dict:
+    return TaskService().delete_task(task_id)
+
+
 @v1.get("/profile/{task_id}")
 def get_profile(task_id: str) -> dict:
     return TaskService().get_task(task_id)["profile"]
@@ -149,9 +156,19 @@ def submit_resource(resource_id: str, payload: SubmitExerciseRequest) -> dict:
     return ResourceService().submit_exercise(payload.task_id, resource_id, payload.answers)
 
 
+@v1.post("/resources/{resource_id}/mastery", response_model=LearningTask)
+def mark_resource_mastery(resource_id: str, payload: ResourceMasteryRequest) -> dict:
+    return ResourceService().mark_mastery(payload.task_id, resource_id, payload.mastery, payload.note)
+
+
 @v1.post("/learning-path/adjust", response_model=LearningTask)
 def adjust_path(payload: AdjustPathRequest) -> dict:
     return LearningPathService().adjust(payload.task_id, payload.reason)
+
+
+@v1.post("/learning-path/complete-step", response_model=LearningTask)
+def complete_step(payload: CompleteStepRequest) -> dict:
+    return LearningPathService().complete_step(payload.task_id, payload.step_id)
 
 
 @v1.post("/assessment/run", response_model=LearningTask)

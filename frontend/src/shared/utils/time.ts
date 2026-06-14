@@ -1,4 +1,4 @@
-export function formatDisplayTime(value: string) {
+export function formatDisplayTime(value?: string) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;

@@ -128,6 +128,9 @@ class ResourceGenerationWorkflow:
                 "types": types,
                 "provided_context": context,
                 "retrieved_contexts": contexts,
+                "recent_exercise_memory": [
+                    item for item in context.get("memory", []) if item.get("type") in {"exercise", "resource_mastery"}
+                ],
             },
             task_id,
         )
@@ -170,6 +173,10 @@ class LearningPathWorkflow:
         next_action = output["steps"][0]["title"] if output.get("steps") else task["next_action"]
         self.tasks.touch(task_id, next_action=next_action, reason=output.get("note", "学习路径已调整。"))
         return output
+
+    def complete_step(self, task_id: str, step_id: str) -> None:
+        self.path.mark_step_done(task_id, step_id)
+        self.tasks.touch(task_id, reason="学生确认已完成当前学习阶段。")
 
 
 class AssessmentWorkflow:

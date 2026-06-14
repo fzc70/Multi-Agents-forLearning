@@ -168,6 +168,33 @@ def init_db() -> None:
               FOREIGN KEY(task_id) REFERENCES learning_tasks(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS exercise_attempts (
+              id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              resource_id TEXT NOT NULL,
+              resource_title TEXT NOT NULL,
+              score INTEGER NOT NULL,
+              total_score INTEGER NOT NULL DEFAULT 100,
+              detail_json TEXT NOT NULL DEFAULT '{}',
+              created_at TEXT NOT NULL,
+              FOREIGN KEY(task_id) REFERENCES learning_tasks(id) ON DELETE CASCADE,
+              FOREIGN KEY(resource_id) REFERENCES learning_resources(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS resource_mastery (
+              id TEXT PRIMARY KEY,
+              task_id TEXT NOT NULL,
+              resource_id TEXT NOT NULL,
+              resource_title TEXT NOT NULL,
+              mastery INTEGER NOT NULL,
+              note TEXT NOT NULL DEFAULT '',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              UNIQUE(task_id, resource_id),
+              FOREIGN KEY(task_id) REFERENCES learning_tasks(id) ON DELETE CASCADE,
+              FOREIGN KEY(resource_id) REFERENCES learning_resources(id) ON DELETE CASCADE
+            );
+
             CREATE TABLE IF NOT EXISTS knowledge_graphs (
               id TEXT PRIMARY KEY,
               task_id TEXT NOT NULL,

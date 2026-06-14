@@ -10,17 +10,29 @@ type AssessmentPageProps = {
   isAssessing: boolean;
 };
 
-export function AssessmentPage({ task, onStartAssessment, onGenerateResource, isAssessing }: AssessmentPageProps) {
+function normalizeSignal(value?: string) {
+  const text = (value || "").trim();
+  const emptyWords = new Set(["无", "暂无", "没有", "无明显", "暂无明显", "none", "null", "n/a"]);
+  if (!text || emptyWords.has(text.toLowerCase()) || text.startsWith("无明显") || text.startsWith("暂无明显")) {
+    return "";
+  }
+  return text;
+}
+
+export function AssessmentPage({ task, onGenerateResource, isAssessing }: AssessmentPageProps) {
   const score = task.assessment.score;
-  const primaryWeakPoint = task.assessment.weakPoints[0] || "当前重点";
+  const weakPoints = task.assessment.weakPoints.map(normalizeSignal).filter(Boolean);
+  const mistakeTypes = task.assessment.mistakeTypes.map(normalizeSignal).filter(Boolean);
+  const primaryWeakPoint = weakPoints[0] || "暂未发现明显薄弱点";
+  const hasClearWeakPoint = weakPoints.length > 0;
 
   if (!task.assessment.tested) {
     return (
       <EmptyState
-        title="还没有评估结果"
-        description="完成一次小测评后，这里会展示掌握度、薄弱点和下一步建议。"
+        title="评估会随学习自动更新"
+        description="完成练习、确认资源掌握度或推进学习路径后，这里会自动形成掌握度、薄弱点和下一步建议。"
         tone="green"
-        action={<Button variant="primary" onClick={onStartAssessment} loading={isAssessing}>开始第一次测评</Button>}
+        action={<Button variant="primary" onClick={() => onGenerateResource("练习题")}>先做一组练习</Button>}
       />
     );
   }
@@ -31,10 +43,10 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
         <div>
           <p className="text-xs font-medium text-rose-700">学习反馈</p>
           <h1 className="text-2xl font-semibold text-ink">学习评估</h1>
-          <p className="mt-2 text-sm text-muted">先看当前状态，再完成下一步练习。</p>
+          <p className="mt-2 text-sm text-muted">评估来自最近练习、资源掌握反馈和路径推进，越新的练习权重越高。</p>
           {isAssessing ? <p className="mt-2 text-xs text-amber-700">正在更新本次测评结果...</p> : null}
         </div>
-        <Button variant="primary" onClick={onStartAssessment} loading={isAssessing}>开始测评</Button>
+        <Button variant="primary" onClick={() => onGenerateResource("练习题")} loading={isAssessing}>生成针对练习</Button>
       </header>
 
       <section className="grid gap-5 xl:grid-cols-[320px_1fr]">
@@ -57,7 +69,9 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
           <div className="mt-5 rounded-ui border border-amber-100 bg-white/80 p-3">
             <p className="text-xs font-medium text-amber-700">诊断结论</p>
             <p className="mt-1 text-sm leading-6 text-slate-700">
-              当前更适合先处理“{primaryWeakPoint}”，再进入下一阶段学习，避免直接堆新内容。
+              {hasClearWeakPoint
+                ? `当前更适合先处理“${primaryWeakPoint}”，再进入下一阶段学习，避免直接堆新内容。`
+                : "当前练习表现较稳定，可以继续确认资源掌握度，并推进下一阶段学习。"}
             </p>
           </div>
         </div>
@@ -72,7 +86,7 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
             <div className="rounded-[14px] border border-amber-100 bg-amber-50/60 p-4">
               <AlertTriangle className="text-amber-600" size={19} />
               <p className="mt-3 text-xs text-muted">主要薄弱点</p>
-              <p className="mt-1 text-sm font-medium text-ink">{task.assessment.weakPoints[0]}</p>
+              <p className="mt-1 text-sm font-medium text-ink">{primaryWeakPoint}</p>
             </div>
             <div className="rounded-[14px] border border-green-100 bg-green-50/60 p-4">
               <TrendingUp className="text-green-600" size={19} />
@@ -122,7 +136,7 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
               <div>
                 <h3 className="text-sm font-semibold text-ink">薄弱点</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {task.assessment.weakPoints.map((item) => (
+                  {(weakPoints.length ? weakPoints : ["继续保持当前表现"]).map((item) => (
                     <button
                       key={item}
                       className="rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-700 transition hover:bg-amber-100"
@@ -136,7 +150,7 @@ export function AssessmentPage({ task, onStartAssessment, onGenerateResource, is
               <div>
                 <h3 className="text-sm font-semibold text-ink">易错类型</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {task.assessment.mistakeTypes.map((item) => (
+                  {(mistakeTypes.length ? mistakeTypes : ["暂无明显易错类型"]).map((item) => (
                     <button
                       key={item}
                       className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-800"

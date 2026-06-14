@@ -88,7 +88,7 @@ export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
                         : "rounded-tl-md border border-slate-200 bg-white text-ink"
                     }`}
                   >
-                    {message.content}
+                    {message.role === "assistant" ? <FormattedMessage content={message.content} /> : message.content}
                   </div>
                 </div>
 
@@ -134,6 +134,32 @@ export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
           </div>
         </div>
       </aside>
+    </div>
+  );
+}
+
+function FormattedMessage({ content }: { content: string }) {
+  const lines = content.split("\n").map((line) => line.trim()).filter(Boolean);
+  return (
+    <div className="space-y-2">
+      {lines.map((line, index) => {
+        const clean = line.replace(/\*\*/g, "");
+        if (/^[-*]\s+/.test(clean)) {
+          return (
+            <div key={`${line}-${index}`} className="flex gap-2">
+              <span className="mt-2 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span>{clean.replace(/^[-*]\s+/, "")}</span>
+            </div>
+          );
+        }
+        if (/^\d+[.、]\s+/.test(clean)) {
+          return <p key={`${line}-${index}`} className="rounded-ui bg-emerald-50/60 px-3 py-2">{clean}</p>;
+        }
+        if (clean.length <= 18 && /[:：]?$/.test(clean)) {
+          return <p key={`${line}-${index}`} className="font-semibold text-emerald-800">{clean.replace(/[:：]$/, "")}</p>;
+        }
+        return <p key={`${line}-${index}`}>{clean}</p>;
+      })}
     </div>
   );
 }

@@ -12,6 +12,9 @@ import { TasksPage } from "../features/tasks/TasksPage";
 import { api } from "../shared/api/client";
 
 type BusyAction = "loading" | "chat" | "upload" | "resource" | "path" | "assessment" | "exercise" | null;
+const PAGE_STORAGE_KEY = "learning-app-page";
+const TASK_STORAGE_KEY = "learning-app-task";
+const RESOURCE_STORAGE_KEY = "learning-app-resource";
 
 function makeTempId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`;
@@ -27,12 +30,13 @@ function inferResourceType(value: string): LearningResource["type"] {
 }
 
 export default function App() {
-  const [page, setPage] = useState<PageKey>("tasks");
+  const [page, setPageState] = useState<PageKey>(() => (localStorage.getItem(PAGE_STORAGE_KEY) as PageKey) || "tasks");
   const [tasks, setTasks] = useState<LearningTask[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [selectedResourceId, setSelectedResourceId] = useState("");
+  const [selectedTaskId, setSelectedTaskIdState] = useState(() => localStorage.getItem(TASK_STORAGE_KEY) || "");
+  const [selectedResourceId, setSelectedResourceIdState] = useState(() => localStorage.getItem(RESOURCE_STORAGE_KEY) || "");
   const [toast, setToast] = useState("");
   const [busyAction, setBusyAction] = useState<BusyAction>("loading");
+  const [pathBusyStep, setPathBusyStep] = useState<{ stepId: string; action: "use" | "generate" | "complete" } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
   const selectedTask = useMemo(() => {
@@ -44,12 +48,31 @@ export default function App() {
     void loadTasks();
   }, []);
 
+  function setPage(nextPage: PageKey) {
+    localStorage.setItem(PAGE_STORAGE_KEY, nextPage);
+    setPageState(nextPage);
+  }
+
+  function setSelectedTaskId(taskId: string) {
+    localStorage.setItem(TASK_STORAGE_KEY, taskId);
+    setSelectedTaskIdState(taskId);
+  }
+
+  function setSelectedResourceId(resourceId: string) {
+    localStorage.setItem(RESOURCE_STORAGE_KEY, resourceId);
+    setSelectedResourceIdState(resourceId);
+  }
+
   async function loadTasks() {
     try {
       setBusyAction("loading");
       const nextTasks = await api.listTasks();
       setTasks(nextTasks);
-      setSelectedTaskId((current) => current || nextTasks[0]?.id || "");
+      setSelectedTaskIdState((current) => {
+        const next = nextTasks.some((task) => task.id === current) ? current : nextTasks[0]?.id || "";
+        if (next) localStorage.setItem(TASK_STORAGE_KEY, next);
+        return next;
+      });
     } catch (error) {
       showToast(error instanceof Error ? error.message : "后端连接失败");
     } finally {
@@ -98,6 +121,18 @@ export default function App() {
       const task = await api.createTask(input);
       replaceTask(task);
       showToast("学习任务已创建");
+    });
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    await withBusy("loading", "正在删除学习任务...", async () => {
+      await api.deleteTask(taskId);
+      const nextTasks = tasks.filter((task) => task.id !== taskId);
+      setTasks(nextTasks);
+      const nextSelected = nextTasks[0]?.id || "";
+      setSelectedTaskId(nextSelected);
+      if (!nextSelected) setPage("tasks");
+      showToast("学习任务已删除");
     });
   }
 
@@ -167,9 +202,12 @@ export default function App() {
     });
   }
 
-  async function handleGenerateResourceAndOpen(type?: LearningResource["type"]) {
-    setPage("resources");
+  async function handleGenerateResourceAndOpen(type?: LearningResource["type"], stepId?: string) {
+    if (stepId) setPathBusyStep({ stepId, action: "generate" });
+    if (!stepId) setPage("resources");
     await handleGenerateResource(type);
+    setPage("resources");
+    if (stepId) setPathBusyStep(null);
   }
 
   async function handleGenerateSelectedResources(types: LearningResource["type"][]) {
@@ -209,12 +247,21 @@ export default function App() {
     });
   }
 
-  async function handleUseRecommendedResource(resourceHint: string) {
+  async function handleUseRecommendedResource(resourceHint: string, stepId?: string) {
     if (!selectedTask) return;
+    if (stepId) setPathBusyStep({ stepId, action: "use" });
     const matched = selectedTask.resources.find((resource) => resource.title === resourceHint || resource.type === resourceHint);
     if (matched) {
-      setSelectedResourceId(matched.id);
-      setPage("resource-detail");
+      await withBusy("resource", "正在打开推荐资源...", async () => {
+        const fullResource = await api.getResource(selectedTask.id, matched.id);
+        updateTaskLocal(selectedTask.id, (task) => ({
+          ...task,
+          resources: task.resources.map((item) => (item.id === fullResource.id ? fullResource : item))
+        }));
+        setSelectedResourceId(fullResource.id);
+        setPage("resource-detail");
+      });
+      if (stepId) setPathBusyStep(null);
       return;
     }
     const type = inferResourceType(resourceHint);
@@ -227,6 +274,7 @@ export default function App() {
       }
       showToast("推荐资源已生成");
     });
+    if (stepId) setPathBusyStep(null);
   }
 
   async function handleSubmitExercise(resource: LearningResource, answers: Record<string, string>) {
@@ -241,6 +289,15 @@ export default function App() {
     return resultPayload;
   }
 
+  async function handleMarkResourceMastery(resource: LearningResource, mastery: number) {
+    if (!selectedTask) return;
+    await withBusy("assessment", "正在更新掌握度...", async () => {
+      const task = await api.markResourceMastery(selectedTask.id, resource.id, mastery);
+      replaceTask(task);
+      showToast(`已记录掌握度：${mastery}%`);
+    });
+  }
+
   async function handleAdjustPath() {
     if (!selectedTask) return;
     await withBusy("path", "正在调整学习路径...", async () => {
@@ -248,6 +305,17 @@ export default function App() {
       replaceTask(task);
       showToast("学习路径已调整");
     });
+  }
+
+  async function handleCompleteStep(stepId: string) {
+    if (!selectedTask) return;
+    setPathBusyStep({ stepId, action: "complete" });
+    await withBusy("path", "正在推进学习路径...", async () => {
+      const task = await api.completePathStep(selectedTask.id, stepId);
+      replaceTask(task);
+      showToast("当前阶段已完成");
+    });
+    setPathBusyStep(null);
   }
 
   async function handleStartAssessment() {
@@ -282,6 +350,7 @@ export default function App() {
           loading={busyAction === "loading"}
           onSelectTask={setSelectedTaskId}
           onCreateTask={handleCreateTask}
+          onDeleteTask={handleDeleteTask}
           onPageChange={setPage}
           onUploadMaterial={handleUploadMaterial}
           onSmartGenerateResource={() => handleGenerateResourceAndOpen()}
@@ -311,6 +380,7 @@ export default function App() {
           resource={selectedResource}
           onBack={() => setPage("resources")}
           onSubmitExercise={handleSubmitExercise}
+          onMarkMastery={handleMarkResourceMastery}
           isSubmitting={busyAction === "exercise"}
         />
       ) : null}
@@ -321,9 +391,11 @@ export default function App() {
           onGenerateResource={handleGenerateResourceAndOpen}
           onUseRecommendedResource={handleUseRecommendedResource}
           onStartAssessment={handleStartAssessment}
+          onCompleteStep={handleCompleteStep}
           isAdjustingPath={busyAction === "path"}
           isAssessing={busyAction === "assessment"}
           isGeneratingResource={busyAction === "resource"}
+          pathBusyStep={pathBusyStep}
         />
       ) : null}
       {selectedTask && page === "assessment" ? (

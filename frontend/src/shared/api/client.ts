@@ -51,6 +51,12 @@ export const api = {
     });
   },
 
+  deleteTask(taskId: string) {
+    return request<{ ok: boolean }>(`/tasks/${encodeURIComponent(taskId)}`, {
+      method: "DELETE"
+    });
+  },
+
   sendMessage(taskId: string, message: string) {
     return request<{ task: LearningTask; reply: { id: string; role: "assistant"; content: string }; grounded: boolean; sourceRefs: SourceRef[] }>("/chat", {
       method: "POST",
@@ -143,10 +149,24 @@ export const api = {
     });
   },
 
+  markResourceMastery(taskId: string, resourceId: string, mastery: number, note?: string) {
+    return request<LearningTask>(`/resources/${encodeURIComponent(resourceId)}/mastery`, {
+      method: "POST",
+      body: JSON.stringify({ taskId, mastery, note })
+    });
+  },
+
   adjustPath(taskId: string, reason?: string) {
     return request<LearningTask>("/learning-path/adjust", {
       method: "POST",
       body: JSON.stringify({ taskId, reason })
+    });
+  },
+
+  completePathStep(taskId: string, stepId: string) {
+    return request<LearningTask>("/learning-path/complete-step", {
+      method: "POST",
+      body: JSON.stringify({ taskId, stepId })
     });
   },
 

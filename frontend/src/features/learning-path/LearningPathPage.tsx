@@ -6,12 +6,14 @@ import { getPathProgress } from "../../shared/utils/progress";
 type LearningPathPageProps = {
   task: LearningTask;
   onAdjustPath: () => void;
-  onGenerateResource: (type?: LearningResource["type"]) => void;
-  onUseRecommendedResource: (resourceHint: string) => void;
+  onGenerateResource: (type?: LearningResource["type"], stepId?: string) => void;
+  onUseRecommendedResource: (resourceHint: string, stepId?: string) => void;
   onStartAssessment: () => void;
+  onCompleteStep: (stepId: string) => void;
   isAdjustingPath: boolean;
   isAssessing: boolean;
   isGeneratingResource: boolean;
+  pathBusyStep: { stepId: string; action: "use" | "generate" | "complete" } | null;
 };
 
 export function LearningPathPage({
@@ -20,9 +22,11 @@ export function LearningPathPage({
   onGenerateResource,
   onUseRecommendedResource,
   onStartAssessment,
+  onCompleteStep,
   isAdjustingPath,
   isAssessing,
-  isGeneratingResource
+  isGeneratingResource,
+  pathBusyStep
 }: LearningPathPageProps) {
   const progress = getPathProgress(task);
   const currentStep = task.path.find((step) => step.status === "current") ?? task.path[0];
@@ -68,6 +72,9 @@ export function LearningPathPage({
         <div className="space-y-3">
           {task.path.map((step, index) => {
             const Icon = step.status === "done" ? CheckCircle2 : step.status === "current" ? Clock : Circle;
+            const busyForStep = pathBusyStep?.stepId === step.id ? pathBusyStep.action : null;
+            const previousDone = index === 0 || task.path.slice(0, index).every((item) => item.status === "done");
+            const locked = step.status !== "current" && !previousDone;
             return (
               <div key={step.id} className={`grid grid-cols-[48px_1fr] gap-4 rounded-[14px] px-4 py-4 ${step.status === "current" ? "bg-emerald-50/70 ring-1 ring-emerald-100" : "bg-slate-50/70"}`}>
                 <div className="flex flex-col items-center">
@@ -102,18 +109,27 @@ export function LearningPathPage({
                       <>
                         <Button
                           variant="primary"
-                          onClick={() => onUseRecommendedResource(step.resource || step.exercise)}
-                          loading={isAssessing || isGeneratingResource}
+                          onClick={() => onUseRecommendedResource(step.resource || step.exercise, step.id)}
+                          loading={busyForStep === "use"}
+                          disabled={isAssessing || isGeneratingResource || isAdjustingPath}
                         >
                           {step.resource.includes("练习") || step.exercise.includes("练习") ? "开始练习" : "使用推荐资源"}
                         </Button>
-                        <Button icon={<FilePlus2 size={15} />} onClick={() => onGenerateResource()} loading={isGeneratingResource}>
+                        <Button
+                          icon={<FilePlus2 size={15} />}
+                          onClick={() => onGenerateResource(undefined, step.id)}
+                          loading={busyForStep === "generate"}
+                          disabled={isAssessing || isGeneratingResource || isAdjustingPath}
+                        >
                           生成推荐资源
+                        </Button>
+                        <Button icon={<CheckCircle2 size={15} />} onClick={() => onCompleteStep(step.id)} loading={busyForStep === "complete"} disabled={isGeneratingResource || isAssessing}>
+                          我已完成
                         </Button>
                       </>
                     ) : (
-                      <Button icon={<FilePlus2 size={15} />} onClick={() => onGenerateResource()} loading={isGeneratingResource}>
-                        生成推荐资源
+                      <Button icon={<FilePlus2 size={15} />} disabled title={locked ? "请先完成上一阶段" : "只有当前阶段可以生成推荐资源"}>
+                        {locked ? "上一阶段完成后解锁" : "切到当前阶段后生成"}
                       </Button>
                     )}
                   </div>

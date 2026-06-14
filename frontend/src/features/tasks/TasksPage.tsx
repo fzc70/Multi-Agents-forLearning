@@ -1,4 +1,4 @@
-import { ArrowRight, Plus, Route, Search } from "lucide-react";
+import { ArrowRight, BookOpen, Plus, Route, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { LearningResource, LearningTask, NewTaskInput, PageKey } from "../../shared/types/task";
 import { Button } from "../../shared/components/Button";
@@ -14,6 +14,7 @@ type TasksPageProps = {
   loading: boolean;
   onSelectTask: (taskId: string) => void;
   onCreateTask: (input: NewTaskInput) => void;
+  onDeleteTask: (taskId: string) => void;
   onPageChange: (page: PageKey) => void;
   onUploadMaterial: (file: File) => void;
   onSmartGenerateResource: () => void;
@@ -28,6 +29,7 @@ export function TasksPage({
   loading,
   onSelectTask,
   onCreateTask,
+  onDeleteTask,
   onPageChange,
   onUploadMaterial,
   onSmartGenerateResource,
@@ -52,16 +54,23 @@ export function TasksPage({
           <div>
             <p className="mb-2 text-xs font-medium text-emerald-700">学习任务</p>
             <h1 className="max-w-3xl text-2xl font-semibold text-ink">
-              {selectedTask ? selectedTask.nextAction : "创建一个学习任务，开始个性化学习"}
+              {selectedTask ? selectedTask.title : "创建一个学习任务，开始个性化学习"}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              {selectedTask ? selectedTask.reason : "系统会根据你的对话、资料、资源使用和练习反馈逐步形成学习画像与路径。"}
-            </p>
+            {!selectedTask ? (
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                系统会根据你的对话、资料、资源使用和练习反馈逐步形成学习画像与路径。
+              </p>
+            ) : null}
             {selectedTask ? (
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button variant="primary" icon={<ArrowRight size={16} />} onClick={() => onPageChange("chat")}>
                   继续学习
                 </Button>
+                {selectedTask.resources.length > 0 ? (
+                  <Button icon={<BookOpen size={16} />} onClick={() => onPageChange("resources")}>
+                    开始学习
+                  </Button>
+                ) : null}
                 <Button icon={<Route size={16} />} onClick={() => onPageChange("path")}>
                   查看路径
                 </Button>
@@ -100,13 +109,14 @@ export function TasksPage({
         />
       ) : (
         <div className="grid gap-5 xl:grid-cols-[0.95fr_1.25fr]">
-          <TaskList tasks={filteredTasks} selectedId={selectedTask?.id ?? ""} onSelect={onSelectTask} />
+          <TaskList tasks={filteredTasks} selectedId={selectedTask?.id ?? ""} onSelect={onSelectTask} onDelete={onDeleteTask} />
           {selectedTask ? (
             <TaskDetail
               task={selectedTask}
               onUploadMaterial={onUploadMaterial}
               onSmartGenerateResource={onSmartGenerateResource}
               onGenerateSelectedResources={onGenerateSelectedResources}
+              onStartLearning={() => onPageChange("resources")}
               isGeneratingResource={isGeneratingResource}
               isUploadingMaterial={isUploadingMaterial}
             />

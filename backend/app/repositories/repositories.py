@@ -67,6 +67,10 @@ class TaskRepository:
         with get_conn() as conn:
             conn.execute(sql, values)
 
+    def delete(self, task_id: str) -> None:
+        with get_conn() as conn:
+            conn.execute("DELETE FROM learning_tasks WHERE id=?", (task_id,))
+
 
 class ProfileRepository:
     default_dimensions = [
@@ -378,6 +382,58 @@ class ResourceRepository:
             )
 
 
+class ExerciseAttemptRepository:
+    def add(
+        self,
+        task_id: str,
+        resource_id: str,
+        resource_title: str,
+        score: int,
+        detail: dict[str, Any],
+    ) -> str:
+        attempt_id = new_id("attempt")
+        with get_conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO exercise_attempts(id,task_id,resource_id,resource_title,score,total_score,detail_json,created_at)
+                VALUES(?,?,?,?,?,?,?,?)
+                """,
+                (attempt_id, task_id, resource_id, resource_title, score, 100, dumps(detail), now_iso()),
+            )
+        return attempt_id
+
+    def list_recent(self, task_id: str, limit: int = 12) -> list[dict[str, Any]]:
+        with get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM exercise_attempts WHERE task_id=? ORDER BY created_at DESC LIMIT ?",
+                (task_id, limit),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+
+class ResourceMasteryRepository:
+    def upsert(self, task_id: str, resource_id: str, resource_title: str, mastery: int, note: str = "") -> None:
+        now = now_iso()
+        with get_conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO resource_mastery(id,task_id,resource_id,resource_title,mastery,note,created_at,updated_at)
+                VALUES(?,?,?,?,?,?,?,?)
+                ON CONFLICT(task_id, resource_id)
+                DO UPDATE SET mastery=excluded.mastery,note=excluded.note,updated_at=excluded.updated_at
+                """,
+                (new_id("mastery"), task_id, resource_id, resource_title, mastery, note, now, now),
+            )
+
+    def list_recent(self, task_id: str, limit: int = 20) -> list[dict[str, Any]]:
+        with get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM resource_mastery WHERE task_id=? ORDER BY updated_at DESC LIMIT ?",
+                (task_id, limit),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+
 class LearningPathRepository:
     def ensure_default(self, task_id: str, title: str) -> None:
         if self.list(task_id):
@@ -444,6 +500,34 @@ class LearningPathRepository:
                 conn.execute(
                     "UPDATE learning_steps SET resource=?, updated_at=? WHERE id=? AND task_id=?",
                     (resource_title, now_iso(), row["id"], task_id),
+                )
+
+    def mark_step_done(self, task_id: str, step_id: str) -> None:
+        now = now_iso()
+        with get_conn() as conn:
+            row = conn.execute(
+                "SELECT sort_order FROM learning_steps WHERE id=? AND task_id=?",
+                (step_id, task_id),
+            ).fetchone()
+            if not row:
+                return
+            sort_order = int(row["sort_order"])
+            conn.execute(
+                "UPDATE learning_steps SET status='done', updated_at=? WHERE id=? AND task_id=?",
+                (now, step_id, task_id),
+            )
+            next_row = conn.execute(
+                """
+                SELECT id FROM learning_steps
+                WHERE task_id=? AND sort_order>? AND status!='done'
+                ORDER BY sort_order LIMIT 1
+                """,
+                (task_id, sort_order),
+            ).fetchone()
+            if next_row:
+                conn.execute(
+                    "UPDATE learning_steps SET status='current', updated_at=? WHERE id=? AND task_id=?",
+                    (now, next_row["id"], task_id),
                 )
 
 class AssessmentRepository:

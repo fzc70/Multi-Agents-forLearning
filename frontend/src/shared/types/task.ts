@@ -24,6 +24,7 @@ export type LearningResource = {
   detail?: Record<string, any>;
   recommendationReason?: string;
   sourceRefs?: SourceRef[];
+  createdAt?: string;
 };
 
 export type SourceRef = {

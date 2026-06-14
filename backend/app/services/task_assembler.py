@@ -148,4 +148,5 @@ class TaskAssembler:
             "id": item["id"],
             **normalized,
             "source_refs": loads(item["source_refs"], []),
+            "created_at": item.get("created_at"),
         }

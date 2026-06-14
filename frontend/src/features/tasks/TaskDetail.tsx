@@ -11,6 +11,7 @@ type TaskDetailProps = {
   onUploadMaterial: (file: File) => void;
   onSmartGenerateResource: () => void;
   onGenerateSelectedResources: (types: LearningResource["type"][]) => void;
+  onStartLearning: () => void;
   isGeneratingResource: boolean;
   isUploadingMaterial: boolean;
 };
@@ -20,6 +21,7 @@ export function TaskDetail({
   onUploadMaterial,
   onSmartGenerateResource,
   onGenerateSelectedResources,
+  onStartLearning,
   isGeneratingResource,
   isUploadingMaterial
 }: TaskDetailProps) {
@@ -55,6 +57,11 @@ export function TaskDetail({
             <Button icon={<Sparkles size={16} />} onClick={() => setGenerateOpen(true)}>
               生成资源
             </Button>
+            {task.resources.length > 0 ? (
+              <Button variant="primary" onClick={onStartLearning}>
+                开始学习
+              </Button>
+            ) : null}
           </div>
         </section>
 

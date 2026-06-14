@@ -4,6 +4,7 @@ import type { LearningResource, LearningTask } from "../../shared/types/task";
 import { Button } from "../../shared/components/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { ResourceGenerationModal } from "../../shared/components/ResourceGenerationModal";
+import { formatDisplayTime } from "../../shared/utils/time";
 import { MaterialsPanel } from "../materials/MaterialsPanel";
 
 type ResourcesPageProps = {
@@ -154,6 +155,7 @@ export function ResourcesPage({
                       </div>
                       <p className="mt-2 text-sm text-muted">{resource.description}</p>
                       <p className="mt-2 text-xs leading-5 text-amber-700">{getRecommendationReason(task, resource)}</p>
+                      <p className="mt-1 text-xs text-muted">创建时间：{formatDisplayTime(resource.createdAt)}</p>
                     </div>
                     <span className="text-xs text-amber-700">{active ? "正在预览" : "查看"}</span>
                   </div>
@@ -176,6 +178,7 @@ export function ResourcesPage({
                 <p className="text-xs font-medium text-amber-700">{selectedResource.type}</p>
                 <h2 className="mt-2 text-lg font-semibold leading-7 text-ink">{selectedResource.title}</h2>
                 <p className="mt-3 text-sm leading-6 text-muted">{selectedResource.description}</p>
+                <p className="mt-2 text-xs text-muted">创建时间：{formatDisplayTime(selectedResource.createdAt)}</p>
                 <div className="mt-4 rounded-ui border border-amber-100 bg-white p-3 text-sm leading-6 text-amber-800">
                   {getRecommendationReason(task, selectedResource)}
                 </div>

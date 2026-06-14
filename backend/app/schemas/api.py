@@ -47,6 +47,7 @@ class LearningResource(ApiModel):
     detail: dict[str, Any] = Field(default_factory=dict)
     recommendation_reason: str | None = None
     source_refs: list[SourceRef] = Field(default_factory=list)
+    created_at: str | None = None
 
 
 class Assessment(ApiModel):
@@ -147,6 +148,17 @@ class SubmitExerciseRequest(ApiModel):
 class SubmitExerciseResponse(ApiModel):
     task: LearningTask
     result: dict[str, Any]
+
+
+class CompleteStepRequest(ApiModel):
+    task_id: str
+    step_id: str
+
+
+class ResourceMasteryRequest(ApiModel):
+    task_id: str
+    mastery: int = Field(ge=0, le=100)
+    note: str | None = None
 
 
 class AdjustPathRequest(ApiModel):
