@@ -12,6 +12,7 @@ export function AssistantLauncher({ task, onSend }: AssistantLauncherProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [showHint, setShowHint] = useState(true);
+  const messages = Array.isArray(task.messages) ? task.messages : [];
   const guideQuestions = [
     "解释一下当前页面",
     "我下一步点哪里？",
@@ -87,7 +88,7 @@ export function AssistantLauncher({ task, onSend }: AssistantLauncherProps) {
               </div>
             </div>
             <div className="space-y-3">
-              {task.messages.slice(-5).map((message) => (
+              {messages.slice(-5).map((message) => (
                 <div
                   key={message.id}
                   className={`max-w-[82%] rounded-ui px-3 py-2 text-sm leading-6 ${

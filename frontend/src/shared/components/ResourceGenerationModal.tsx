@@ -18,7 +18,6 @@ const resourceTypes: LearningResource["type"][] = [
   "练习题",
   "思维导图",
   "拓展阅读",
-  "视频脚本",
   "代码案例",
   "知识图谱"
 ];

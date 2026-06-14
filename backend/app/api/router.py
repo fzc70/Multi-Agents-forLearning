@@ -1,4 +1,7 @@
+import json
+
 from fastapi import APIRouter, File, Query, UploadFile
+from fastapi.responses import StreamingResponse
 
 from app.core.config import get_settings
 from app.llm.adapter import DeepSeekAdapter, LLMNotConfigured
@@ -17,6 +20,9 @@ from app.schemas.api import (
     KnowledgeGraphRequest,
     LearningMaterial,
     LearningTask,
+    LearningResource,
+    SubmitExerciseRequest,
+    SubmitExerciseResponse,
 )
 from app.services.services import (
     AgentRunService,
@@ -108,6 +114,21 @@ def chat(payload: ChatRequest) -> dict:
     return ChatService().chat(payload.task_id, payload.message, payload.use_rag)
 
 
+@v1.post("/chat/stream")
+def chat_stream(payload: ChatRequest):
+    def event_stream():
+        try:
+            for event in ChatService().chat_stream_events(payload.task_id, payload.message, payload.use_rag):
+                yield json.dumps(event, ensure_ascii=False) + "\n"
+        except Exception as exc:  # noqa: BLE001
+            yield json.dumps(
+                {"type": "error", "message": f"对话服务暂时不可用：{exc}"},
+                ensure_ascii=False,
+            ) + "\n"
+
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
+
 @v1.post("/resources/generate", response_model=GenerateResourceResponse)
 def generate_resource(payload: GenerateResourceRequest) -> dict:
     return ResourceService().generate(payload.task_id, payload.types, payload.mode)
@@ -116,6 +137,16 @@ def generate_resource(payload: GenerateResourceRequest) -> dict:
 @v1.post("/resources/{resource_id}/attach-to-path", response_model=LearningTask)
 def attach_resource_to_path(resource_id: str, payload: AttachResourceRequest) -> dict:
     return ResourceService().attach_to_path(payload.task_id, resource_id)
+
+
+@v1.get("/resources/{resource_id}", response_model=LearningResource)
+def get_resource(resource_id: str, task_id: str = Query(...)) -> dict:
+    return ResourceService().get_resource(task_id, resource_id)
+
+
+@v1.post("/resources/{resource_id}/submit", response_model=SubmitExerciseResponse)
+def submit_resource(resource_id: str, payload: SubmitExerciseRequest) -> dict:
+    return ResourceService().submit_exercise(payload.task_id, resource_id, payload.answers)
 
 
 @v1.post("/learning-path/adjust", response_model=LearningTask)

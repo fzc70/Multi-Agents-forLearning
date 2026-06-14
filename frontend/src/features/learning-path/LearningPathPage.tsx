@@ -7,6 +7,7 @@ type LearningPathPageProps = {
   task: LearningTask;
   onAdjustPath: () => void;
   onGenerateResource: (type?: LearningResource["type"]) => void;
+  onUseRecommendedResource: (resourceHint: string) => void;
   onStartAssessment: () => void;
   isAdjustingPath: boolean;
   isAssessing: boolean;
@@ -17,6 +18,7 @@ export function LearningPathPage({
   task,
   onAdjustPath,
   onGenerateResource,
+  onUseRecommendedResource,
   onStartAssessment,
   isAdjustingPath,
   isAssessing,
@@ -43,7 +45,7 @@ export function LearningPathPage({
       <section className="grid gap-3 md:grid-cols-3">
         {[
           { label: "当前阶段", value: currentStep?.title ?? task.nextAction },
-          { label: "练习安排", value: currentStep?.exercise ?? "完成一次小练习" },
+          { label: "资源使用", value: currentStep?.resource ?? "生成推荐资源" },
           { label: "节奏建议", value: progress.percent >= 70 ? "进入复盘和巩固" : "保持小步推进" }
         ].map((item) => (
           <div key={item.label} className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
@@ -98,16 +100,20 @@ export function LearningPathPage({
                       <Button>查看复盘</Button>
                     ) : step.status === "current" ? (
                       <>
-                        <Button variant="primary" onClick={onStartAssessment} loading={isAssessing}>
-                          开始练习
+                        <Button
+                          variant="primary"
+                          onClick={() => onUseRecommendedResource(step.resource || step.exercise)}
+                          loading={isAssessing || isGeneratingResource}
+                        >
+                          {step.resource.includes("练习") || step.exercise.includes("练习") ? "开始练习" : "使用推荐资源"}
                         </Button>
                         <Button icon={<FilePlus2 size={15} />} onClick={() => onGenerateResource()} loading={isGeneratingResource}>
-                          生成配套资源
+                          生成推荐资源
                         </Button>
                       </>
                     ) : (
                       <Button icon={<FilePlus2 size={15} />} onClick={() => onGenerateResource()} loading={isGeneratingResource}>
-                        提前准备资源
+                        生成推荐资源
                       </Button>
                     )}
                   </div>

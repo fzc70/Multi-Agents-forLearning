@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.llm.adapter import LLMError, LLMNotConfigured
 
 
 class TutorAgent(BaseAgent):
@@ -31,3 +32,36 @@ class TutorAgent(BaseAgent):
                 "先明确卡点，再做一个最小练习，完成后根据错因调整路径。"
             )
         return {"reply": reply, "grounded": bool(contexts), "source_refs": source_refs}
+
+    def stream_reply(self, payload: dict[str, Any], task_id: str):
+        try:
+            yielded = False
+            for chunk in self.llm.stream_text(
+                agent_name=self.name,
+                prompt_version=f"{self.prompt_version}-stream",
+                system_prompt=(
+                    "你是个性化学习答疑智能体。结合当前任务、学习画像、资料片段和历史表现回答。"
+                    "回答要直接、清晰、适合学生继续行动；没有资料依据时不要声称参考了资料。"
+                ),
+                user_payload=payload,
+                task_id=task_id,
+            ):
+                yielded = True
+                yield chunk
+            if yielded:
+                return
+        except (LLMNotConfigured, LLMError) as exc:
+            self.run_repo.add(
+                agent_name=self.name,
+                model=getattr(self.llm, "model", "unknown"),
+                prompt_version=f"{self.prompt_version}-stream",
+                input_json=payload,
+                output_json={"fallback": True},
+                error=str(exc),
+                latency_ms=0,
+                task_id=task_id,
+            )
+        fallback = self.run(payload, task_id)
+        text = str(fallback.get("reply", ""))
+        for index in range(0, len(text), 12):
+            yield text[index : index + 12]

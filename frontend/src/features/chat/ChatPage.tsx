@@ -13,6 +13,8 @@ const prompts = ["讲解一下当前重点", "出一道小题", "帮我复盘错
 
 export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
   const [text, setText] = useState("");
+  const messages = Array.isArray(task.messages) ? task.messages : [];
+  const profileTags = Array.isArray(task.profileTags) ? task.profileTags : [];
 
   function send(value: string) {
     const message = value.trim();
@@ -48,7 +50,7 @@ export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
             ))}
           </div>
 
-          {task.messages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="rounded-ui border border-line bg-slate-50 p-5">
               <h3 className="font-semibold text-ink">可以这样开始</h3>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -64,7 +66,7 @@ export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
               </div>
             </div>
           ) : (
-            task.messages.map((message) => (
+            messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex items-start gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -124,7 +126,7 @@ export function ChatPage({ task, onSendMessage, isSending }: ChatPageProps) {
         <div className="rounded-[16px] border border-slate-200 bg-white p-5">
           <h2 className="section-title">学习依据</h2>
           <div className="mt-3 flex flex-wrap gap-2">
-            {task.profileTags.slice(0, 6).map((tag) => (
+            {profileTags.slice(0, 6).map((tag) => (
               <span key={tag} className="rounded-full border border-line bg-slate-50 px-3 py-1.5 text-xs text-slate-700">
                 {tag}
               </span>

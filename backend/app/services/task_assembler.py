@@ -12,6 +12,7 @@ from app.repositories.repositories import (
     TaskRepository,
     loads,
 )
+from app.tools.resource_quality import ResourceQualityGate
 
 
 class TaskAssembler:
@@ -66,15 +67,7 @@ class TaskAssembler:
             for item in self.materials.list(task_id)
         ]
         resources = [
-            {
-                "id": item["id"],
-                "type": item["type"],
-                "title": item["title"],
-                "description": item["description"],
-                "content": item["content"],
-                "recommendation_reason": item["recommendation_reason"],
-                "source_refs": loads(item["source_refs"], []),
-            }
+            self._resource_from_row(item, task)
             for item in self.resources.list(task_id)
         ]
         steps = [
@@ -136,3 +129,23 @@ class TaskAssembler:
             f"目标：{values.get('goal', '待明确')}；基础：{values.get('foundation', '待了解')}；"
             f"当前薄弱点：{values.get('weakness', '待观察')}。"
         )
+
+    @staticmethod
+    def _resource_from_row(item: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
+        normalized = ResourceQualityGate().normalize(
+            {
+                "type": item["type"],
+                "title": item["title"],
+                "description": item["description"],
+                "content": item["content"],
+                "detail": loads(item.get("detail_json"), {}),
+                "recommendation_reason": item["recommendation_reason"],
+            },
+            task["title"],
+            task["next_action"],
+        )
+        return {
+            "id": item["id"],
+            **normalized,
+            "source_refs": loads(item["source_refs"], []),
+        }

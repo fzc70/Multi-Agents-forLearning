@@ -324,6 +324,7 @@ class ResourceRepository:
         title: str,
         description: str,
         content: str,
+        detail: dict[str, Any],
         recommendation_reason: str,
         source_refs: list[dict[str, Any]],
     ) -> str:
@@ -332,8 +333,8 @@ class ResourceRepository:
         with get_conn() as conn:
             conn.execute(
                 """
-                INSERT INTO learning_resources(id,task_id,type,title,description,content,recommendation_reason,source_refs,created_at,updated_at)
-                VALUES(?,?,?,?,?,?,?,?,?,?)
+                INSERT INTO learning_resources(id,task_id,type,title,description,content,detail_json,recommendation_reason,source_refs,created_at,updated_at)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     resource_id,
@@ -342,6 +343,7 @@ class ResourceRepository:
                     title,
                     description,
                     content,
+                    dumps(detail),
                     recommendation_reason,
                     dumps(source_refs),
                     now,
@@ -354,6 +356,25 @@ class ResourceRepository:
         with get_conn() as conn:
             return row_to_dict(
                 conn.execute("SELECT * FROM learning_resources WHERE id=? AND task_id=?", (resource_id, task_id)).fetchone()
+            )
+
+    def update_normalized(
+        self,
+        resource_id: str,
+        task_id: str,
+        content: str,
+        detail: dict[str, Any],
+        description: str,
+        recommendation_reason: str,
+    ) -> None:
+        with get_conn() as conn:
+            conn.execute(
+                """
+                UPDATE learning_resources
+                SET content=?, detail_json=?, description=?, recommendation_reason=?, updated_at=?
+                WHERE id=? AND task_id=?
+                """,
+                (content, dumps(detail), description, recommendation_reason, now_iso(), resource_id, task_id),
             )
 
 

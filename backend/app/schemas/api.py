@@ -27,7 +27,7 @@ class LearningStep(ApiModel):
     status: Literal["done", "current", "todo"]
 
 
-ResourceType = Literal["讲解文档", "练习题", "思维导图", "拓展阅读", "视频脚本", "代码案例", "知识图谱"]
+ResourceType = Literal["讲解文档", "练习题", "思维导图", "拓展阅读", "代码案例", "知识图谱"]
 
 
 class SourceRef(ApiModel):
@@ -44,6 +44,7 @@ class LearningResource(ApiModel):
     title: str
     description: str
     content: str | None = None
+    detail: dict[str, Any] = Field(default_factory=dict)
     recommendation_reason: str | None = None
     source_refs: list[SourceRef] = Field(default_factory=list)
 
@@ -136,6 +137,16 @@ class GenerateResourceResponse(ApiModel):
 
 class AttachResourceRequest(ApiModel):
     task_id: str
+
+
+class SubmitExerciseRequest(ApiModel):
+    task_id: str
+    answers: dict[str, Any]
+
+
+class SubmitExerciseResponse(ApiModel):
+    task: LearningTask
+    result: dict[str, Any]
 
 
 class AdjustPathRequest(ApiModel):

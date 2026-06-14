@@ -2,6 +2,20 @@ import type { LearningResource, LearningTask, NewTaskInput, SourceRef } from "..
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 
+function toCamelKey(value: string) {
+  return value.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase());
+}
+
+function camelize<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((item) => camelize(item)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [toCamelKey(key), camelize(item)])
+    ) as T;
+  }
+  return value;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -44,6 +58,57 @@ export const api = {
     });
   },
 
+  async streamMessage(
+    taskId: string,
+    message: string,
+    handlers: {
+      onStatus?: (message: string) => void;
+      onDelta: (content: string) => void;
+      onDone: (payload: { task: LearningTask }) => void;
+    }
+  ) {
+    try {
+      const response = await fetch(`${API_BASE}/chat/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, message, useRag: true })
+      });
+      if (!response.ok || !response.body) {
+        const text = await response.text();
+        throw new Error(text || "对话请求失败");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: any;
+          try {
+            event = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (event.type === "status") handlers.onStatus?.(event.message);
+          if (event.type === "delta") handlers.onDelta(event.content);
+          if (event.type === "done") handlers.onDone({ task: camelize(event.task) });
+          if (event.type === "error") throw new Error(event.message);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.toLowerCase().includes("network")) {
+        throw new Error("对话连接中断，请确认后端正在运行，并稍后重试。");
+      }
+      throw new Error(message || "对话连接失败，请稍后重试。");
+    }
+  },
+
   uploadMaterial(taskId: string, file: File) {
     const form = new FormData();
     form.append("file", file);
@@ -64,6 +129,17 @@ export const api = {
     return request<LearningTask>(`/resources/${encodeURIComponent(resourceId)}/attach-to-path`, {
       method: "POST",
       body: JSON.stringify({ taskId })
+    });
+  },
+
+  getResource(taskId: string, resourceId: string) {
+    return request<LearningResource>(`/resources/${encodeURIComponent(resourceId)}?task_id=${encodeURIComponent(taskId)}`);
+  },
+
+  submitExercise(taskId: string, resourceId: string, answers: Record<string, string>) {
+    return request<{ task: LearningTask; result: any }>(`/resources/${encodeURIComponent(resourceId)}/submit`, {
+      method: "POST",
+      body: JSON.stringify({ taskId, answers })
     });
   },
 

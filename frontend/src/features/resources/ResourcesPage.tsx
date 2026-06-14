@@ -22,7 +22,6 @@ const resourceTypes: Array<LearningResource["type"] | "全部"> = [
   "练习题",
   "思维导图",
   "拓展阅读",
-  "视频脚本",
   "代码案例",
   "知识图谱"
 ];
@@ -34,7 +33,6 @@ function getRecommendationReason(task: LearningTask, resource: LearningResource)
     练习题: "适合马上验证是否真的掌握。",
     思维导图: "适合整理知识之间的关系。",
     拓展阅读: "适合补充背景和迁移理解。",
-    视频脚本: "适合把抽象内容转成分步骤讲解。",
     代码案例: "适合通过实操建立手感。",
     知识图谱: "适合查看知识点之间的连接。"
   };
@@ -198,7 +196,7 @@ export function ResourcesPage({
                 <div className="mt-5 flex gap-2">
                   <Button onClick={() => onUseResource(selectedResource, "path")}>加入路径</Button>
                   <Button variant="primary" onClick={() => onUseResource(selectedResource, "start")}>
-                    开始使用
+                    进入详情
                   </Button>
                 </div>
               </>

@@ -15,6 +15,7 @@ from app.repositories.repositories import (
     TaskRepository,
 )
 from app.tools.context_builder import ContextBuilder
+from app.tools.resource_quality import ResourceQualityGate
 
 
 class ChatProfileWorkflow:
@@ -61,12 +62,56 @@ class ChatProfileWorkflow:
             "source_refs": reply.get("source_refs", []),
         }
 
+    def stream_events(self, task: dict[str, Any], message: str, use_rag: bool = True):
+        task_id = task["id"]
+        self.conversation.add_message(task_id, "user", message)
+        intent = self.intent.run({"message": message, "task_title": task["title"]}, task_id)
+        context = self.context_builder.build_for_task(task, message, top_k=6) if use_rag and intent.get("need_retrieval") else {}
+        contexts = context.get("retrieved_contexts", [])
+        payload = {
+            "message": message,
+            "task_title": task["title"],
+            "next_action": task["next_action"],
+            "provided_context": context,
+            "retrieved_contexts": contexts,
+        }
+        chunks: list[str] = []
+        for chunk in self.tutor.stream_reply(payload, task_id):
+            chunks.append(chunk)
+            yield {"type": "delta", "content": chunk}
+
+        reply_text = "".join(chunks).strip()
+        if not reply_text:
+            fallback = self.tutor.run(payload, task_id)
+            reply_text = str(fallback["reply"])
+            yield {"type": "delta", "content": reply_text}
+
+        profile_updates = self.profile_agent.run({"message": message, "task_title": task["title"]}, task_id)
+        for update in profile_updates.get("updates", []):
+            self.profile.update_dimension(
+                task_id,
+                str(update.get("dimension_id", "style")),
+                str(update.get("value", "")),
+                str(update.get("evidence", f"来自对话：{message[:60]}")),
+            )
+        self.memory.add(task_id, "conversation", message[:300], f"来自对话：{message[:60]}", 55)
+        message_id = self.conversation.add_message(task_id, "assistant", reply_text)
+        self.tasks.touch(task_id)
+        source_refs = [item.get("source_ref") for item in contexts if item.get("source_ref")]
+        yield {
+            "type": "done",
+            "reply": {"id": message_id, "role": "assistant", "content": reply_text},
+            "grounded": bool(source_refs),
+            "sourceRefs": source_refs,
+        }
+
 
 class ResourceGenerationWorkflow:
     def __init__(self) -> None:
         self.agent = ResourceAgent()
         self.resources = ResourceRepository()
         self.context_builder = ContextBuilder()
+        self.quality = ResourceQualityGate()
         self.tasks = TaskRepository()
 
     def run(self, task: dict[str, Any], types: list[str] | None, mode: str) -> list[dict[str, Any]]:
@@ -89,12 +134,14 @@ class ResourceGenerationWorkflow:
         created: list[dict[str, Any]] = []
         source_refs = [item["source_ref"] for item in contexts if item.get("source_ref")]
         for resource in output.get("resources", []):
+            resource = self.quality.normalize(resource, task["title"], task["next_action"])
             resource_id = self.resources.create(
                 task_id=task_id,
                 type_=resource["type"],
                 title=resource["title"],
                 description=resource["description"],
                 content=resource["content"],
+                detail=resource["detail"],
                 recommendation_reason=resource.get("recommendation_reason", ""),
                 source_refs=source_refs,
             )

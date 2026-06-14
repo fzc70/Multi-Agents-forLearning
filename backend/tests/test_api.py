@@ -27,11 +27,21 @@ def test_task_chat_resource_path_assessment_flow() -> None:
     )
     assert resource.status_code == 200
     assert resource.json()["resources"]
+    assert resource.json()["resources"][0]["detail"]
     resource_id = resource.json()["resources"][0]["id"]
 
     attach = client.post(f"/api/v1/resources/{resource_id}/attach-to-path", json={"taskId": task["id"]})
     assert attach.status_code == 200
     assert attach.json()["path"][0]["resource"]
+
+    quiz = client.post(
+        "/api/v1/resources/generate",
+        json={"taskId": task["id"], "types": ["练习题"], "mode": "selected"},
+    )
+    quiz_id = quiz.json()["resources"][0]["id"]
+    submit = client.post(f"/api/v1/resources/{quiz_id}/submit", json={"taskId": task["id"], "answers": {"q1": "B"}})
+    assert submit.status_code == 200
+    assert "score" in submit.json()["result"]
 
     path = client.post("/api/v1/learning-path/adjust", json={"taskId": task["id"], "reason": "根据最新练习调整"})
     assert path.status_code == 200

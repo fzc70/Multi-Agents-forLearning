@@ -1,4 +1,4 @@
-export type PageKey = "tasks" | "profile" | "chat" | "resources" | "path" | "assessment";
+export type PageKey = "tasks" | "profile" | "chat" | "resources" | "resource-detail" | "path" | "assessment";
 
 export type Message = {
   id: string;
@@ -17,10 +17,11 @@ export type LearningStep = {
 
 export type LearningResource = {
   id: string;
-  type: "讲解文档" | "练习题" | "思维导图" | "拓展阅读" | "视频脚本" | "代码案例" | "知识图谱";
+  type: "讲解文档" | "练习题" | "思维导图" | "拓展阅读" | "代码案例" | "知识图谱";
   title: string;
   description: string;
   content?: string;
+  detail?: Record<string, any>;
   recommendationReason?: string;
   sourceRefs?: SourceRef[];
 };

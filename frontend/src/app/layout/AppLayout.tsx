@@ -26,7 +26,7 @@ export function AppLayout({
   return (
     <div className="min-h-screen bg-canvas">
       <Sidebar page={page} onPageChange={onPageChange} />
-      <main className="ml-[88px] px-8 py-7">
+      <main className="ml-[88px] px-8 pb-28 pt-7">
         <div className="mx-auto max-w-[1220px]">
           {page !== "tasks" && task ? (
             <TaskContextBar

@@ -6,8 +6,18 @@ from app.agents.base import BaseAgent
 class ResourceAgent(BaseAgent):
     name = "ResourceAgent"
     system_prompt = (
-        "生成个性化学习资源。必须结合任务、画像、资料片段和下一步目标。输出 JSON："
-        '{"resources":[{"type":"讲解文档","title":"...","description":"...","content":"...","recommendation_reason":"..."}]}'
+        "生成高质量、可直接使用的个性化学习资源，面向真实学生，不要只给摘要或预览。"
+        "必须结合任务、画像、资料片段和下一步目标，内容要具体、可学习、可操作、可评估。"
+        "只支持：讲解文档、练习题、思维导图、拓展阅读、代码案例、知识图谱。"
+        "每个资源必须包含非空 detail 结构，严禁空数组、空对象、占位符。"
+        "讲解文档 detail.sections 至少 6 节，每节 body 至少 80 字，包含概念、步骤、例子、易错点、自检；"
+        "练习题 detail.questions 至少 5 题，题干清楚，至少 2 道选择题和 2 道简答/应用题，每题含 answer、analysis、difficulty；"
+        "思维导图/知识图谱 detail.nodes 至少 8 个、edges 至少 7 条，节点 label 不得为空，关系要有 label；"
+        "拓展阅读 detail.readings 至少 5 条，每条说明阅读目标、推荐理由、预计时间；"
+        "代码案例必须含 scenario、starter_code、tasks、reference_solution、tests、explanation。"
+        "content 字段要是该资源正文摘要，不要与 detail 矛盾。"
+        "输出 JSON："
+        '{"resources":[{"type":"讲解文档","title":"...","description":"...","content":"...","detail":{},"recommendation_reason":"..."}]}'
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
@@ -32,7 +42,13 @@ class ResourceAgent(BaseAgent):
                         f"参考依据：{source_hint}\n\n"
                         "学习安排：\n1. 先理解核心概念。\n2. 结合例子完成一次迁移。\n3. 用小练习验证掌握情况。\n4. 复盘错因并更新下一步。"
                     ),
+                    "detail": self._detail_for(type_, task_title, next_action, source_hint),
                     "recommendation_reason": f"当前下一步是“{next_action}”，该资源能直接支持本阶段学习。",
                 }
             )
         return {"resources": resources}
+
+    def _detail_for(self, type_: str, task_title: str, next_action: str, source_hint: str) -> dict[str, Any]:
+        from app.tools.resource_quality import ResourceQualityGate
+
+        return ResourceQualityGate().default_detail(type_, task_title, next_action) | {"source_hint": source_hint}
