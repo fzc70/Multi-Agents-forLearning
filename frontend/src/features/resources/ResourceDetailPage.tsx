@@ -165,6 +165,10 @@ function LectureDocument({ detail, content, title }: { detail: Record<string, an
               <InfoBlock icon={<Lightbulb size={16} />} title="理解要点" items={section.keyPoints} tone="green" />
               <InfoBlock icon={<AlertTriangle size={16} />} title="易错提醒" items={section.warnings} tone="amber" />
             </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <TextBlock title="例子" value={section.example} />
+              <TextBlock title="自检" value={section.selfCheck} />
+            </div>
           </article>
         )) : <MissingDetail message="这份讲解文档缺少正文内容，请返回资源库重新生成。" />}
         {Array.isArray(detail.checkpoints) ? (
@@ -197,6 +201,16 @@ function InfoBlock({ icon, title, items, tone }: { icon: ReactNode; title: strin
   );
 }
 
+function TextBlock({ title, value }: { title: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div className="rounded-ui border border-slate-100 bg-white p-4">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-700">{value}</p>
+    </div>
+  );
+}
+
 function normalizeLectureSections(detail: Record<string, any>, content: string | undefined, title: string) {
   const rawSections = Array.isArray(detail.sections) && detail.sections.length
     ? detail.sections
@@ -205,12 +219,22 @@ function normalizeLectureSections(detail: Record<string, any>, content: string |
     const heading = String(section.heading || section.title || `第 ${index + 1} 节`).trim();
     const body = String(section.body || section.content || section.text || "").replace(/\s+/g, " ").trim();
     const sentences = splitSentences(body);
+    const rawSteps = Array.isArray(section.steps) ? section.steps.map((item: unknown) => String(item).trim()).filter(Boolean) : [];
+    const extractedSteps = rawSteps.length ? rawSteps : extractStepLike(sentences, body);
+    const keyPoints = Array.isArray(section.key_points)
+      ? section.key_points.map((item: unknown) => String(item).trim()).filter(Boolean)
+      : extractKeyPoints(sentences, heading).slice(0, 4);
+    const warnings = Array.isArray(section.common_mistakes)
+      ? section.common_mistakes.map((item: unknown) => String(item).trim()).filter(Boolean)
+      : extractWarnings(sentences).slice(0, 3);
     return {
       heading,
-      overview: sentences.slice(0, 2).join(" ") || body || "本节用于建立基本理解。",
-      steps: extractStepLike(sentences).slice(0, 5),
-      keyPoints: extractKeyPoints(sentences, heading).slice(0, 4),
-      warnings: extractWarnings(sentences).slice(0, 3),
+      overview: String(section.overview || sentences.slice(0, 2).join(" ") || body || "本节用于建立基本理解。"),
+      steps: ensureMinimumSteps(extractedSteps, heading).slice(0, 6),
+      keyPoints,
+      warnings,
+      example: String(section.example || ""),
+      selfCheck: String(section.self_check || section.selfCheck || ""),
     };
   });
 }
@@ -239,10 +263,72 @@ function splitSentences(text: string) {
     .filter(Boolean);
 }
 
-function extractStepLike(sentences: string[]) {
+function extractStepLike(sentences: string[], body: string) {
+  const numberedSteps = extractNumberedSteps(body);
+  if (numberedSteps.length >= 2) return numberedSteps;
+  const ordinalSteps = extractOrdinalSteps(body);
+  if (ordinalSteps.length >= 2) return ordinalSteps;
   const stepWords = ["第一", "第二", "第三", "第四", "步骤", "先", "再", "然后", "最后"];
   const matched = sentences.filter((item) => stepWords.some((word) => item.includes(word)));
-  return matched.length ? matched : sentences.slice(1, 5);
+  if (numberedSteps.length === 1 && matched.length > 1) {
+    return [...numberedSteps, ...matched.filter((item) => item !== numberedSteps[0])];
+  }
+  return matched.length ? matched : buildFallbackSteps(sentences);
+}
+
+function extractNumberedSteps(text: string) {
+  const steps: string[] = [];
+  const regex = /(?:步骤[:：]\s*)?(\d+)[)）.、]\s*([^；;。]+)(?=[；;。]\s*(?:\d+[)）.、]|$)|$)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const value = normalizeStepText(match[2]);
+    if (value) steps.push(value);
+  }
+  return steps;
+}
+
+function extractOrdinalSteps(text: string) {
+  const steps: string[] = [];
+  const regex = /第[一二三四五六七八九十]+步[:：]\s*([^；;。]+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const value = normalizeStepText(match[1]);
+    if (value) steps.push(value);
+  }
+  return steps;
+}
+
+function normalizeStepText(value: string) {
+  return value
+    .replace(/^步骤[:：]\s*/, "")
+    .replace(/^[：:，,、\s]+/, "")
+    .trim();
+}
+
+function buildFallbackSteps(sentences: string[]) {
+  const useful = sentences.filter((item) => item.length > 8).slice(0, 4);
+  if (useful.length >= 2) return useful;
+  return [
+    "先复述本节核心概念，确认自己能说清它解决什么问题。",
+    "再找出本节涉及的条件、符号或规则，避免只记结论。",
+    "然后跟着一个例子走完整过程，把每一步写出来。",
+    "最后用一道同类题自检，并记录错因。"
+  ];
+}
+
+function ensureMinimumSteps(steps: string[], heading: string) {
+  const cleanSteps = steps.map(normalizeStepText).filter(Boolean);
+  const additions = [
+    `用自己的话复述“${heading}”的核心目的，确认不是只记住名词。`,
+    "选一个小例子，把本节规则或方法完整套用一遍。",
+    "遮住答案独立复现关键过程，检查每一步是否有依据。",
+    "记录最容易出错的一步，并用一道同类题做自检。"
+  ];
+  for (const item of additions) {
+    if (cleanSteps.length >= 4) break;
+    if (!cleanSteps.some((step) => step.includes(item.slice(0, 8)))) cleanSteps.push(item);
+  }
+  return cleanSteps;
 }
 
 function extractKeyPoints(sentences: string[], heading: string) {
@@ -302,28 +388,35 @@ function MindmapResource({ detail }: { detail: Record<string, any> }) {
       </div>
       {nodes.length ? (
         <div className="mt-6 overflow-x-auto rounded-[16px] border border-emerald-100 bg-[#fbfaf7] p-5">
-          <div className="min-w-[720px]">
-            <div className="mx-auto w-fit rounded-[18px] border border-emerald-200 bg-emerald-700 px-6 py-4 text-center text-base font-semibold text-white shadow-sm">
+          <div className="flex min-w-[920px] items-center gap-8">
+            <div className="relative shrink-0">
+              <div className="w-[180px] rounded-[18px] border border-emerald-200 bg-emerald-700 px-5 py-5 text-center text-base font-semibold leading-6 text-white shadow-sm">
               {center?.label || detail.center || "中心主题"}
+              </div>
+              <div className="absolute left-full top-1/2 h-px w-8 bg-emerald-200" />
             </div>
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="relative flex-1 space-y-4 border-l border-emerald-200 pl-8">
               {branches.map((branch) => (
-                <article key={branch.id} className="rounded-[16px] border border-slate-200 bg-white p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                    <div>
-                      <h3 className="font-semibold text-ink">{branch.label}</h3>
-                      {branch.relation ? <p className="mt-1 text-xs text-emerald-700">{branch.relation}</p> : null}
+                <article key={branch.id} className="relative grid grid-cols-[220px_1fr] items-start gap-4">
+                  <div className="absolute -left-8 top-6 h-px w-8 bg-emerald-200" />
+                  <div className="rounded-[14px] border border-emerald-100 bg-white p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      <div>
+                        <h3 className="font-semibold text-ink">{branch.label}</h3>
+                        {branch.relation ? <p className="mt-1 text-xs text-emerald-700">{branch.relation}</p> : null}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-3 space-y-2 border-l border-dashed border-emerald-200 pl-4">
+                  <div className="grid gap-2 border-l border-dashed border-emerald-200 pl-4 md:grid-cols-2">
                     {branch.children.length ? branch.children.map((child) => (
-                      <div key={child.id} className="rounded-ui bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">
+                      <div key={child.id} className="relative rounded-ui border border-slate-100 bg-white px-3 py-2 text-sm leading-6 text-slate-700">
+                        <span className="absolute -left-4 top-1/2 h-px w-4 bg-emerald-100" />
                         <span className="font-medium text-slate-900">{child.label}</span>
                         {child.relation ? <span className="ml-2 text-xs text-muted">({child.relation})</span> : null}
                       </div>
                     )) : (
-                      <div className="rounded-ui bg-slate-50 px-3 py-2 text-sm text-muted">暂无子知识点</div>
+                      <div className="rounded-ui border border-slate-100 bg-white px-3 py-2 text-sm text-muted">暂无子知识点</div>
                     )}
                   </div>
                 </article>
