@@ -2,17 +2,28 @@ from __future__ import annotations
 
 from typing import Any
 
-
-RESOURCE_TYPES = {"讲解文档", "练习题", "思维导图", "拓展阅读", "代码案例", "知识图谱"}
+from app.domain.constants import (
+    RESOURCE_TYPE_CODE,
+    RESOURCE_TYPE_EXERCISE,
+    RESOURCE_TYPE_KG,
+    RESOURCE_TYPE_LECTURE,
+    RESOURCE_TYPE_MINDMAP,
+    RESOURCE_TYPE_READING,
+    RESOURCE_TYPE_SET,
+)
 
 
 class ResourceQualityGate:
-    """保证资源内容结构完整，LLM 输出缺字段时进行确定性补齐。"""
+    """资源质量门禁。
+
+    Agent 负责生成主要内容；门禁只做结构校验、缺字段修复和兜底内容补齐，
+    避免空详情、空题目、不可渲染图谱进入前端。
+    """
 
     def normalize(self, resource: dict[str, Any], task_title: str, next_action: str) -> dict[str, Any]:
-        type_ = str(resource.get("type") or "讲解文档")
-        if type_ not in RESOURCE_TYPES:
-            type_ = "讲解文档"
+        type_ = str(resource.get("type") or RESOURCE_TYPE_LECTURE)
+        if type_ not in RESOURCE_TYPE_SET:
+            type_ = RESOURCE_TYPE_LECTURE
         title = str(resource.get("title") or f"{task_title} · {type_}")
         description = str(resource.get("description") or self.description(type_, next_action))
         focus = self._focus_title(title, task_title, type_)
@@ -33,7 +44,7 @@ class ResourceQualityGate:
         }
 
     def default_detail(self, type_: str, task_title: str, next_action: str) -> dict[str, Any]:
-        if type_ == "练习题":
+        if type_ == RESOURCE_TYPE_EXERCISE:
             return {
                 "instructions": "先独立完成，再提交答案。系统会根据正确率、答题完整度和错因给出反馈。",
                 "questions": [
@@ -86,7 +97,7 @@ class ResourceQualityGate:
                     },
                 ],
             }
-        if type_ == "思维导图":
+        if type_ == RESOURCE_TYPE_MINDMAP:
             return {
                 "center": task_title,
                 "nodes": [
@@ -111,7 +122,7 @@ class ResourceQualityGate:
                     {"source": "n5", "target": "n9", "label": "记录"},
                 ],
             }
-        if type_ == "拓展阅读":
+        if type_ == RESOURCE_TYPE_READING:
             return {
                 "summary": f"围绕“{task_title}”补充背景、应用场景和常见误区。",
                 "readings": [
@@ -123,7 +134,7 @@ class ResourceQualityGate:
                 ],
                 "guiding_questions": ["这个知识解决什么问题？", "它和已有知识有什么关系？", "最容易错在哪里？"],
             }
-        if type_ == "代码案例":
+        if type_ == RESOURCE_TYPE_CODE:
             return {
                 "language": "Python",
                 "scenario": f"用代码演示“{task_title}”的关键步骤。",
@@ -133,7 +144,7 @@ class ResourceQualityGate:
                 "tests": ["调用 solve()，检查返回值是否符合预期"],
                 "explanation": f"代码案例用于把“{next_action}”转成可执行过程。",
             }
-        if type_ == "知识图谱":
+        if type_ == RESOURCE_TYPE_KG:
             return {
                 "nodes": [
                     {"id": "n1", "label": task_title, "type": "topic"},
@@ -251,9 +262,9 @@ class ResourceQualityGate:
 
     def _repair_detail(self, type_: str, detail: dict[str, Any], task_title: str, next_action: str) -> dict[str, Any]:
         fallback = self.default_detail(type_, task_title, next_action)
-        if type_ == "练习题" and len(detail.get("questions", [])) < 5:
+        if type_ == RESOURCE_TYPE_EXERCISE and len(detail.get("questions", [])) < 5:
             detail["questions"] = fallback["questions"]
-        if type_ == "练习题":
+        if type_ == RESOURCE_TYPE_EXERCISE:
             repaired = []
             fallback_questions = fallback["questions"]
             for index, question in enumerate(detail.get("questions", [])):
@@ -292,18 +303,18 @@ class ResourceQualityGate:
                     }
                 )
             detail["questions"] = repaired
-        if type_ == "讲解文档":
+        if type_ == RESOURCE_TYPE_LECTURE:
             detail = self._repair_lecture_detail(detail, fallback, task_title, next_action)
-        if type_ in {"思维导图", "知识图谱"}:
+        if type_ in {RESOURCE_TYPE_MINDMAP, RESOURCE_TYPE_KG}:
             detail["nodes"] = self._repair_nodes(detail.get("nodes", []), fallback["nodes"])
             detail["edges"] = self._repair_edges(detail.get("edges", []), fallback["edges"])
             if len(detail.get("nodes", [])) < 8:
                 detail["nodes"] = fallback["nodes"]
             if len(detail.get("edges", [])) < 7:
                 detail["edges"] = fallback["edges"]
-        if type_ == "拓展阅读" and len(detail.get("readings", [])) < 5:
+        if type_ == RESOURCE_TYPE_READING and len(detail.get("readings", [])) < 5:
             detail = fallback
-        if type_ == "代码案例" and not detail.get("starter_code"):
+        if type_ == RESOURCE_TYPE_CODE and not detail.get("starter_code"):
             detail = fallback
         return detail
 
@@ -540,7 +551,7 @@ class ResourceQualityGate:
 
     @staticmethod
     def markdown_from_detail(type_: str, detail: dict[str, Any], task_title: str) -> str:
-        if type_ == "讲解文档":
+        if type_ == RESOURCE_TYPE_LECTURE:
             sections = detail.get("sections", [])
             blocks = []
             for item in sections:
@@ -557,13 +568,13 @@ class ResourceQualityGate:
                     f"### 自检\n{item.get('self_check', '')}"
                 )
             return "\n\n".join(blocks)
-        if type_ == "练习题":
+        if type_ == RESOURCE_TYPE_EXERCISE:
             return "\n\n".join(f"{i + 1}. {q.get('stem')}" for i, q in enumerate(detail.get("questions", [])))
-        if type_ in {"思维导图", "知识图谱"}:
+        if type_ in {RESOURCE_TYPE_MINDMAP, RESOURCE_TYPE_KG}:
             nodes = "、".join(item.get("label", "") for item in detail.get("nodes", []))
             return f"## {task_title}\n\n节点：{nodes}"
-        if type_ == "拓展阅读":
+        if type_ == RESOURCE_TYPE_READING:
             return f"## 拓展阅读\n\n{detail.get('summary', '')}"
-        if type_ == "代码案例":
+        if type_ == RESOURCE_TYPE_CODE:
             return f"## 代码案例\n\n```python\n{detail.get('starter_code', '')}\n```"
         return str(detail)

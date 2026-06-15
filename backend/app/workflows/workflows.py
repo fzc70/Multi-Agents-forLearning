@@ -4,6 +4,7 @@ from typing import Any
 
 from app.agents import EvaluatorAgent, IntentAgent, KGAgent, PlannerAgent, ProfileAgent, ResourceAgent, TutorAgent
 from app.core.time import now_iso
+from app.domain.constants import DEFAULT_SMART_RESOURCE_TYPES
 from app.repositories.repositories import (
     AssessmentRepository,
     ConversationRepository,
@@ -19,6 +20,8 @@ from app.tools.resource_quality import ResourceQualityGate
 
 
 class ChatProfileWorkflow:
+    """对话工作流：识别意图、检索上下文、生成回答并更新画像/记忆。"""
+
     def __init__(self) -> None:
         self.intent = IntentAgent()
         self.profile_agent = ProfileAgent()
@@ -107,6 +110,8 @@ class ChatProfileWorkflow:
 
 
 class ResourceGenerationWorkflow:
+    """资源生成工作流：统一决定资源类型、构建上下文、调用资源 Agent 和质量门禁。"""
+
     def __init__(self) -> None:
         self.agent = ResourceAgent()
         self.resources = ResourceRepository()
@@ -117,8 +122,8 @@ class ResourceGenerationWorkflow:
     def run(self, task: dict[str, Any], types: list[str] | None, mode: str) -> list[dict[str, Any]]:
         task_id = task["id"]
         if mode == "smart" or not types:
-            weak = task.get("assessment", {}).get("weak_points", [])
-            types = ["练习题"] if weak else ["讲解文档"]
+            # 智能生成走完整资源包，保证学生拿到讲解、练习、图谱和迁移材料。
+            types = list(DEFAULT_SMART_RESOURCE_TYPES)
         context = self.context_builder.build_for_task(task, f"{task['title']} {task['next_action']}", top_k=4)
         contexts = context.get("retrieved_contexts", [])
         output = self.agent.run(
@@ -154,6 +159,8 @@ class ResourceGenerationWorkflow:
 
 
 class LearningPathWorkflow:
+    """学习路径工作流：根据画像、薄弱点和资源状态生成/推进路径。"""
+
     def __init__(self) -> None:
         self.agent = PlannerAgent()
         self.path = LearningPathRepository()
@@ -180,6 +187,8 @@ class LearningPathWorkflow:
 
 
 class AssessmentWorkflow:
+    """评估工作流：汇总作答表现，更新评估结果、画像和下一步建议。"""
+
     def __init__(self) -> None:
         self.agent = EvaluatorAgent()
         self.assessment = AssessmentRepository()
@@ -206,6 +215,8 @@ class AssessmentWorkflow:
 
 
 class KnowledgeGraphWorkflow:
+    """知识图谱工作流：合并资料片段和会话文本，抽取实体关系。"""
+
     def __init__(self) -> None:
         self.agent = KGAgent()
         self.kg = KnowledgeGraphRepository()

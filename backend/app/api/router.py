@@ -26,7 +26,7 @@ from app.schemas.api import (
     SubmitExerciseRequest,
     SubmitExerciseResponse,
 )
-from app.services.services import (
+from app.services import (
     AgentRunService,
     AssessmentService,
     ChatService,

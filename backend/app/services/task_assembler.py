@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.domain.constants import RESOURCE_TYPE_EXERCISE
 from app.repositories.repositories import (
     AssessmentRepository,
     ConversationRepository,
@@ -16,6 +17,8 @@ from app.tools.resource_quality import ResourceQualityGate
 
 
 class TaskAssembler:
+    """把多张持久化表装配成前端需要的任务视图。"""
+
     def __init__(self) -> None:
         self.tasks = TaskRepository()
         self.profile = ProfileRepository()
@@ -108,7 +111,7 @@ class TaskAssembler:
             "profile": profile,
             "materials": materials,
             "materials_count": len(materials),
-            "exercise_count": len([r for r in resources if r["type"] == "练习题"]),
+            "exercise_count": len([r for r in resources if r["type"] == RESOURCE_TYPE_EXERCISE]),
             "resources": resources,
             "path": steps,
             "assessment": assessment,

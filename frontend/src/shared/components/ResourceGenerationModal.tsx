@@ -1,5 +1,6 @@
 import { Check, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { DEFAULT_SELECTED_RESOURCE_TYPES, RESOURCE_TYPES } from "../constants/resources";
 import type { LearningResource } from "../types/task";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
@@ -13,15 +14,6 @@ type ResourceGenerationModalProps = {
   isGenerating?: boolean;
 };
 
-const resourceTypes: LearningResource["type"][] = [
-  "讲解文档",
-  "练习题",
-  "思维导图",
-  "拓展阅读",
-  "代码案例",
-  "知识图谱"
-];
-
 export function ResourceGenerationModal({
   open,
   onClose,
@@ -31,7 +23,7 @@ export function ResourceGenerationModal({
   isGenerating = false
 }: ResourceGenerationModalProps) {
   const [mode, setMode] = useState<"choice" | "custom">("choice");
-  const [selectedTypes, setSelectedTypes] = useState<LearningResource["type"][]>(["讲解文档", "练习题"]);
+  const [selectedTypes, setSelectedTypes] = useState<LearningResource["type"][]>(DEFAULT_SELECTED_RESOURCE_TYPES);
 
   function close() {
     setMode("choice");
@@ -87,7 +79,7 @@ export function ResourceGenerationModal({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
-            {resourceTypes.map((type) => {
+            {RESOURCE_TYPES.map((type) => {
               const active = selectedTypes.includes(type);
               return (
                 <button

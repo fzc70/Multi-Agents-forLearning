@@ -10,6 +10,7 @@ import { ResourceDetailPage } from "../features/resources/ResourceDetailPage";
 import { ResourcesPage } from "../features/resources/ResourcesPage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { api } from "../shared/api/client";
+import { inferResourceType } from "../shared/constants/resources";
 
 type BusyAction = "loading" | "chat" | "upload" | "resource" | "path" | "assessment" | "exercise" | null;
 const PAGE_STORAGE_KEY = "learning-app-page";
@@ -18,15 +19,6 @@ const RESOURCE_STORAGE_KEY = "learning-app-resource";
 
 function makeTempId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`;
-}
-
-function inferResourceType(value: string): LearningResource["type"] {
-  if (value.includes("练习") || value.includes("题") || value.includes("测评")) return "练习题";
-  if (value.includes("图谱")) return "知识图谱";
-  if (value.includes("导图")) return "思维导图";
-  if (value.includes("阅读")) return "拓展阅读";
-  if (value.includes("代码") || value.includes("实操")) return "代码案例";
-  return "讲解文档";
 }
 
 export default function App() {

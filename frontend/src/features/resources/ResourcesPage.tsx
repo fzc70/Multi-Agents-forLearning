@@ -4,6 +4,7 @@ import type { LearningResource, LearningTask } from "../../shared/types/task";
 import { Button } from "../../shared/components/Button";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { ResourceGenerationModal } from "../../shared/components/ResourceGenerationModal";
+import { RESOURCE_FILTERS, RESOURCE_TYPE_REASONS } from "../../shared/constants/resources";
 import { formatDisplayTime } from "../../shared/utils/time";
 import { MaterialsPanel } from "../materials/MaterialsPanel";
 
@@ -17,27 +18,9 @@ type ResourcesPageProps = {
   isUploadingMaterial: boolean;
 };
 
-const resourceTypes: Array<LearningResource["type"] | "全部"> = [
-  "全部",
-  "讲解文档",
-  "练习题",
-  "思维导图",
-  "拓展阅读",
-  "代码案例",
-  "知识图谱"
-];
-
 function getRecommendationReason(task: LearningTask, resource: LearningResource) {
   const weakPoint = task.assessment.weakPoints[0] || task.nextAction;
-  const typeReason: Record<LearningResource["type"], string> = {
-    讲解文档: "适合先把概念和方法讲清楚。",
-    练习题: "适合马上验证是否真的掌握。",
-    思维导图: "适合整理知识之间的关系。",
-    拓展阅读: "适合补充背景和迁移理解。",
-    代码案例: "适合通过实操建立手感。",
-    知识图谱: "适合查看知识点之间的连接。"
-  };
-  return `推荐原因：当前重点是“${weakPoint}”，${typeReason[resource.type]}`;
+  return `推荐原因：当前重点是“${weakPoint}”，${RESOURCE_TYPE_REASONS[resource.type]}`;
 }
 
 export function ResourcesPage({
@@ -49,7 +32,7 @@ export function ResourcesPage({
   isGeneratingResource,
   isUploadingMaterial
 }: ResourcesPageProps) {
-  const [type, setType] = useState<(typeof resourceTypes)[number]>("全部");
+  const [type, setType] = useState<(typeof RESOURCE_FILTERS)[number]>("全部");
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selectedResourceId, setSelectedResourceId] = useState(task.resources[0]?.id ?? "");
   const resourceCountRef = useRef(task.resources.length);
@@ -95,7 +78,7 @@ export function ResourcesPage({
           </Button>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
-          {resourceTypes.map((item) => (
+          {RESOURCE_FILTERS.map((item) => (
             <button
               key={item}
               className={`rounded-full px-3 py-1.5 text-sm transition ${

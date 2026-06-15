@@ -1,15 +1,17 @@
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.domain.constants import RESOURCE_TYPE_LECTURE, RESOURCE_TYPES
 
 
 class ResourceAgent(BaseAgent):
     name = "ResourceAgent"
+    supported_types_text = "、".join(RESOURCE_TYPES)
     system_prompt = (
         "生成高质量、可直接使用的个性化学习资源，面向真实学生，不要只给摘要或预览。"
         "必须结合任务、画像、资料片段和下一步目标，内容要具体、可学习、可操作、可评估。"
         "如果上下文里有 recent_exercise_memory 或 memory，练习题必须避开已练过的题干和同构题。"
-        "只支持：讲解文档、练习题、思维导图、拓展阅读、代码案例、知识图谱。"
+        f"只支持：{supported_types_text}。"
         "每个资源必须包含非空 detail 结构，严禁空数组、空对象、占位符。"
         "讲解文档 detail.sections 至少 6 节，每节必须包含 heading、body、steps、key_points、common_mistakes、example、self_check；"
         "其中 steps 必须是 4-6 条完整可执行步骤，不能只写摘要，不能空泛写“复述/举例/自检”，必须结合本节知识内容；"
@@ -32,7 +34,7 @@ class ResourceAgent(BaseAgent):
         next_action = str(payload.get("next_action", "当前重点"))
         contexts = payload.get("retrieved_contexts") or []
         source_hint = str(contexts[0].get("content", ""))[:180] if contexts else "暂无资料片段，按当前任务画像生成。"
-        types = payload.get("types") or ["讲解文档"]
+        types = payload.get("types") or [RESOURCE_TYPE_LECTURE]
         resources = []
         for type_ in types:
             resources.append(

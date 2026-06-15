@@ -7,6 +7,12 @@ from app.repositories.repositories import AgentRunRepository
 
 
 class BaseAgent:
+    """所有 Agent 的统一 LLM 调用入口。
+
+    Agent 只负责“输入 payload -> 结构化 JSON 输出”，不直接修改业务表。
+    业务持久化、状态推进和跨模块编排放在 Service/Workflow。
+    """
+
     name = "BaseAgent"
     prompt_version = "v1"
     system_prompt = "你是一个学习系统智能体。只输出 JSON 对象。"

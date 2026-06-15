@@ -8,6 +8,14 @@ from app.core.time import now_iso
 from app.storage.database import dumps, get_conn, loads, row_to_dict
 
 
+"""Repository 层只封装 SQLite 读写。
+
+禁止在这里调用 LLM、Workflow 或 FastAPI 对象；复杂业务规则放到 Service。
+当前文件作为小型项目的持久化聚合入口，后续表规模继续扩大时可按领域拆成
+task_repository.py、resource_repository.py、assessment_repository.py 等文件。
+"""
+
+
 def _label_size(size: int) -> str:
     if size >= 1024 * 1024:
         return f"{size / 1024 / 1024:.1f} MB"
