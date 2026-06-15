@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.domain.learning_rules import infer_intent
 
 
 class IntentAgent(BaseAgent):
@@ -15,12 +16,4 @@ class IntentAgent(BaseAgent):
         if output and "intent" in output:
             return output
         message = str(payload.get("message", ""))
-        if any(word in message for word in ["生成", "资料", "资源", "练习"]):
-            intent = "generate_resource"
-        elif any(word in message for word in ["路径", "计划", "下一步"]):
-            intent = "plan"
-        elif any(word in message for word in ["测评", "测试", "掌握"]):
-            intent = "assessment"
-        else:
-            intent = "tutoring"
-        return {"intent": intent, "need_retrieval": True, "confidence": 72}
+        return infer_intent(message)

@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.domain.learning_rules import PROFILE_RULES, evidence_text, match_rules
 
 
 class ProfileAgent(BaseAgent):
@@ -15,13 +16,13 @@ class ProfileAgent(BaseAgent):
         if output and isinstance(output.get("updates"), list):
             return output
         message = str(payload.get("message", ""))
-        updates: list[dict[str, str]] = []
-        if any(word in message for word in ["不会", "不懂", "困难", "卡", "错"]):
-            updates.append({"dimension_id": "weakness", "value": message[:80], "evidence": f"来自对话：{message[:60]}"})
-        if any(word in message for word in ["喜欢", "希望", "想要", "目标"]):
-            updates.append({"dimension_id": "goal", "value": message[:80], "evidence": f"来自对话：{message[:60]}"})
-        if any(word in message for word in ["例子", "代码", "视频", "图", "练习"]):
-            updates.append({"dimension_id": "preference", "value": message[:80], "evidence": f"来自对话：{message[:60]}"})
-        if not updates:
-            updates.append({"dimension_id": "style", "value": "偏好分步骤引导", "evidence": f"来自对话：{message[:60]}"})
+        updates = [
+            {
+                "dimension_id": rule.dimension_id,
+                "value": message[:120],
+                "evidence": evidence_text(rule.evidence_label, message),
+            }
+            for rule in match_rules(message, PROFILE_RULES)
+        ]
+        # 没有明确证据时不写画像，避免把普通聊天误判成学习偏好。
         return {"updates": updates[:3]}

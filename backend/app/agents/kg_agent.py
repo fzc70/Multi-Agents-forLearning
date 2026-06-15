@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 from app.agents.base import BaseAgent
+from app.domain.learning_rules import KG_MINIMAL_NODES, KG_STOP_WORDS
 
 
 class KGAgent(BaseAgent):
@@ -17,13 +18,12 @@ class KGAgent(BaseAgent):
             return output
         text = str(payload.get("text", ""))
         words = re.findall(r"[\u4e00-\u9fff]{2,}|[A-Za-z][A-Za-z0-9_]{2,}", text)
-        stop = {"我们", "可以", "当前", "学习", "资料", "任务", "这个", "一个", "进行", "完成"}
         seen: list[str] = []
         for word in words:
-            if word not in stop and word not in seen and len(seen) < 16:
+            if word not in KG_STOP_WORDS and word not in seen and len(seen) < 16:
                 seen.append(word)
         if len(seen) < 2:
-            seen = ["学习目标", "核心概念", "练习反馈", "下一步计划"]
+            seen = list(KG_MINIMAL_NODES)
         nodes = [{"id": f"n{i + 1}", "label": word, "type": "concept"} for i, word in enumerate(seen)]
         edges = [
             {"source": nodes[i]["id"], "target": nodes[i + 1]["id"], "label": "关联"}

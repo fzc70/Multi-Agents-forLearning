@@ -43,8 +43,8 @@ class ExerciseService:
         results.sort(key=lambda item: str(item["id"]))
 
         score = max(0, min(100, round(sum(int(item.get("score", 0)) for item in results))))
-        weak_points = self._meaningful_values(item.get("weak_point") for item in results) or ["暂未发现明显薄弱点"]
-        mistake_types = self._meaningful_values(item.get("mistake_type") for item in results) or ["暂无明显易错类型"]
+        weak_points = self._meaningful_values(item.get("weak_point") for item in results)
+        mistake_types = self._meaningful_values(item.get("mistake_type") for item in results)
 
         detail = {"items": results, "answers": answers, "resource_type": resource["type"]}
         self.attempts.add(task_id, resource_id, resource["title"], score, detail)
@@ -206,9 +206,10 @@ class ExerciseService:
         MemoryRepository().add(
             task_id,
             "exercise",
-            f"完成练习「{resource_title}」，得分 {score}，薄弱点：{'、'.join(weak_points[:3])}",
+            f"完成练习「{resource_title}」，得分 {score}，薄弱点：{'、'.join(weak_points[:3]) or '本次未记录明确薄弱点'}",
             f"来自资源练习：{resource_title}",
             82,
         )
-        ProfileRepository().update_dimension(task_id, "weakness", "；".join(weak_points[:4]), f"来自练习「{resource_title}」")
+        if weak_points:
+            ProfileRepository().update_dimension(task_id, "weakness", "；".join(weak_points[:4]), f"来自练习「{resource_title}」")
         ProfileRepository().update_dimension(task_id, "exercise", f"最近练习 {score} 分", f"来自练习「{resource_title}」")

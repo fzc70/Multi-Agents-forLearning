@@ -106,12 +106,11 @@ class ResourceService:
             task_id,
             assessment_score,
             f"综合最近练习和资源掌握反馈，当前掌握度为 {assessment_score}。",
-            ["资源理解不稳定"] if mastery < 80 else ["保持稳定输出"],
-            ["掌握度自评偏低"] if mastery < 80 else ["暂无明显易错类型"],
+            ["资源理解不稳定"] if mastery < 80 else [],
+            ["掌握度自评偏低"] if mastery < 80 else [],
             f"资源「{resource['title']}」自评掌握度 {mastery}%",
             "低掌握资源建议回看讲解并做针对练习。" if mastery < 80 else "可以推进学习路径的下一阶段。",
         )
         ProfileRepository().update_dimension(task_id, "preference", f"最近资源掌握反馈 {mastery}%", f"来自资源「{resource['title']}」")
         TaskRepository().touch(task_id, reason="根据资源掌握反馈更新评估。")
         return self.tasks.get_task(task_id)
-

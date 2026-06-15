@@ -23,6 +23,7 @@ class GradingAgent(BaseAgent):
         answer = str(item.get("answer", "")).strip()
         given = str(item.get("student_answer", "")).strip()
         max_score = int(item.get("max_score", 20))
+        stem = str(item.get("stem") or "本题")
         overlap = len(set(answer) & set(given))
         base = 0
         if given:
@@ -37,7 +38,11 @@ class GradingAgent(BaseAgent):
             "score": score,
             "max_score": max_score,
             "correct": score >= max_score * 0.75,
-            "analysis": "答案有一定相关性，但还需要补充关键步骤和依据。" if score < max_score * 0.75 else "答案基本覆盖要点。",
-            "weak_point": "步骤表达" if score < max_score * 0.75 else "保持稳定输出",
-            "mistake_type": "答案不完整" if score < max_score * 0.75 else "暂无明显错误",
+            "analysis": (
+                f"回答与参考答案有一定相关性，但“{stem[:30]}”仍需要补充关键依据。"
+                if score < max_score * 0.75
+                else f"回答基本覆盖“{stem[:30]}”的主要要求。"
+            ),
+            "weak_point": f"{stem[:24]}：依据不足" if score < max_score * 0.75 else "",
+            "mistake_type": "答案不完整或缺少推理依据" if score < max_score * 0.75 else "",
         }
