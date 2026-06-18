@@ -27,13 +27,18 @@ class ResourceAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """生成指定类型的结构化学习资源。"""
         output = self.run_llm(payload, task_id)
         if output and isinstance(output.get("resources"), list) and output["resources"]:
             return output
         task_title = str(payload.get("task_title", "学习任务"))
         next_action = str(payload.get("next_action", "当前重点"))
         contexts = payload.get("retrieved_contexts") or []
-        source_hint = str(contexts[0].get("content", ""))[:180] if contexts else "暂无资料片段，按当前任务画像生成。"
+        source_hint = (
+            str(contexts[0].get("content", ""))[:180]
+            if contexts
+            else "暂无资料片段，按当前任务画像生成。"
+        )
         types = payload.get("types") or [RESOURCE_TYPE_LECTURE]
         resources = []
         for type_ in types:
@@ -48,13 +53,20 @@ class ResourceAgent(BaseAgent):
                         f"参考依据：{source_hint}\n\n"
                         "学习安排：\n1. 先理解核心概念。\n2. 结合例子完成一次迁移。\n3. 用小练习验证掌握情况。\n4. 复盘错因并更新下一步。"
                     ),
-                    "detail": self._detail_for(type_, task_title, next_action, source_hint),
+                    "detail": self._detail_for(
+                        type_, task_title, next_action, source_hint
+                    ),
                     "recommendation_reason": f"当前下一步是“{next_action}”，该资源能直接支持本阶段学习。",
                 }
             )
         return {"resources": resources}
 
-    def _detail_for(self, type_: str, task_title: str, next_action: str, source_hint: str) -> dict[str, Any]:
+    def _detail_for(
+        self, type_: str, task_title: str, next_action: str, source_hint: str
+    ) -> dict[str, Any]:
+        """生成指定资源类型的降级详情结构。"""
         from app.tools.resource_quality import ResourceQualityGate
 
-        return ResourceQualityGate().default_detail(type_, task_title, next_action) | {"source_hint": source_hint}
+        return ResourceQualityGate().default_detail(type_, task_title, next_action) | {
+            "source_hint": source_hint
+        }

@@ -12,14 +12,18 @@ class GradingAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """依据题目、参考答案和学生答案完成结构化评分。"""
         output = self.run_llm(payload, task_id)
         items = output.get("items") if output else None
         if isinstance(items, list) and items:
             return {"items": items}
-        return {"items": [self._fallback_item(item) for item in payload.get("items", [])]}
+        return {
+            "items": [self._fallback_item(item) for item in payload.get("items", [])]
+        }
 
     @staticmethod
     def _fallback_item(item: dict[str, Any]) -> dict[str, Any]:
+        """在模型评分不可用时生成单题降级评分。"""
         answer = str(item.get("answer", "")).strip()
         given = str(item.get("student_answer", "")).strip()
         max_score = int(item.get("max_score", 20))
@@ -44,5 +48,7 @@ class GradingAgent(BaseAgent):
                 else f"回答基本覆盖“{stem[:30]}”的主要要求。"
             ),
             "weak_point": f"{stem[:24]}：依据不足" if score < max_score * 0.75 else "",
-            "mistake_type": "答案不完整或缺少推理依据" if score < max_score * 0.75 else "",
+            "mistake_type": (
+                "答案不完整或缺少推理依据" if score < max_score * 0.75 else ""
+            ),
         }

@@ -12,6 +12,7 @@ class IntentAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """识别用户意图和后续处理需求。"""
         output = self.run_llm(payload, task_id)
         if output and "intent" in output:
             return output

@@ -7,6 +7,7 @@ from app.storage.database import init_db
 
 
 def create_app() -> FastAPI:
+    """创建并配置 FastAPI 应用。"""
     settings = get_settings()
     init_db()
     app = FastAPI(title=settings.app_name, version="1.0.0")

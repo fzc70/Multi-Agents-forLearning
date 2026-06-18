@@ -13,13 +13,16 @@ class TutorAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """结合任务上下文生成个性化辅导回答。"""
         output = self.run_llm(payload, task_id)
         if output and "reply" in output:
             return output
         message = str(payload.get("message", ""))
         task_title = str(payload.get("task_title", "当前任务"))
         contexts = payload.get("retrieved_contexts") or []
-        source_refs = [item.get("source_ref") for item in contexts if item.get("source_ref")]
+        source_refs = [
+            item.get("source_ref") for item in contexts if item.get("source_ref")
+        ]
         if contexts:
             first = str(contexts[0].get("content", ""))[:160]
             reply = (
@@ -34,6 +37,7 @@ class TutorAgent(BaseAgent):
         return {"reply": reply, "grounded": bool(contexts), "source_refs": source_refs}
 
     def stream_reply(self, payload: dict[str, Any], task_id: str):
+        """以流式方式生成个性化辅导回答。"""
         try:
             yielded = False
             for chunk in self.llm.stream_text(

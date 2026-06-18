@@ -12,6 +12,7 @@ class ProfileAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """从有效证据中更新学生画像。"""
         output = self.run_llm(payload, task_id)
         if output and isinstance(output.get("updates"), list):
             return output

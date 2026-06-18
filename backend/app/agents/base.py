@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.llm.adapter import LLMAdapter, LLMError, LLMNotConfigured, get_llm_adapter
-from app.repositories import AgentRunRepository
+from app.repositories.agent_run_repository import AgentRunRepository
 
 
 class BaseAgent:
@@ -18,10 +18,14 @@ class BaseAgent:
     system_prompt = "你是一个学习系统智能体。只输出 JSON 对象。"
 
     def __init__(self, llm: LLMAdapter | None = None) -> None:
+        """初始化 BaseAgent 所需的依赖。"""
         self.llm = llm or get_llm_adapter()
         self.run_repo = AgentRunRepository()
 
-    def run_llm(self, payload: dict[str, Any], task_id: str | None = None) -> dict[str, Any] | None:
+    def run_llm(
+        self, payload: dict[str, Any], task_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """执行 run_llm 对应的业务处理。"""
         try:
             return self.llm.complete_json(
                 agent_name=self.name,

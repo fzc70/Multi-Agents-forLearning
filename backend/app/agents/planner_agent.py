@@ -1,7 +1,11 @@
 from typing import Any
 
 from app.agents.base import BaseAgent
-from app.domain.constants import RESOURCE_TYPE_EXERCISE, RESOURCE_TYPE_LECTURE, RESOURCE_TYPE_MINDMAP
+from app.domain.constants import (
+    RESOURCE_TYPE_EXERCISE,
+    RESOURCE_TYPE_LECTURE,
+    RESOURCE_TYPE_MINDMAP,
+)
 from app.domain.learning_rules import clean_meaningful_values
 
 
@@ -13,6 +17,7 @@ class PlannerAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """生成或调整个性化学习路径。"""
         output = self.run_llm(payload, task_id)
         if output and isinstance(output.get("steps"), list) and output["steps"]:
             return output

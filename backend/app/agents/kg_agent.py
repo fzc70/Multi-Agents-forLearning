@@ -13,6 +13,7 @@ class KGAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """从学习上下文中抽取实体与关系。"""
         output = self.run_llm(payload, task_id)
         if output and isinstance(output.get("nodes"), list):
             return output
@@ -24,7 +25,10 @@ class KGAgent(BaseAgent):
                 seen.append(word)
         if len(seen) < 2:
             seen = list(KG_MINIMAL_NODES)
-        nodes = [{"id": f"n{i + 1}", "label": word, "type": "concept"} for i, word in enumerate(seen)]
+        nodes = [
+            {"id": f"n{i + 1}", "label": word, "type": "concept"}
+            for i, word in enumerate(seen)
+        ]
         edges = [
             {"source": nodes[i]["id"], "target": nodes[i + 1]["id"], "label": "关联"}
             for i in range(min(len(nodes) - 1, 14))

@@ -8,7 +8,7 @@ import httpx
 
 from app.core.config import Settings, get_settings
 from app.llm.json_parser import parse_json_object
-from app.repositories import AgentRunRepository
+from app.repositories.agent_run_repository import AgentRunRepository
 
 
 class LLMError(RuntimeError):
@@ -31,6 +31,7 @@ class LLMAdapter(ABC):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> dict[str, Any]:
+        """调用大模型并返回结构化 JSON 结果。"""
         raise NotImplementedError
 
     def stream_text(
@@ -41,14 +42,22 @@ class LLMAdapter(ABC):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> Iterator[str]:
-        output = self.complete_json(agent_name, prompt_version, system_prompt, user_payload, task_id)
+        """调用大模型并逐段返回文本。"""
+        output = self.complete_json(
+            agent_name, prompt_version, system_prompt, user_payload, task_id
+        )
         text = str(output.get("reply") or output.get("summary") or "")
         if text:
             yield text
 
 
 class DeepSeekAdapter(LLMAdapter):
-    def __init__(self, settings: Settings | None = None, run_repo: AgentRunRepository | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        run_repo: AgentRunRepository | None = None,
+    ) -> None:
+        """初始化 DeepSeekAdapter 所需的依赖。"""
         self.settings = settings or get_settings()
         self.run_repo = run_repo or AgentRunRepository()
         self.model = self.settings.deepseek_model
@@ -61,6 +70,7 @@ class DeepSeekAdapter(LLMAdapter):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> dict[str, Any]:
+        """调用大模型并返回结构化 JSON 结果。"""
         if not self.settings.deepseek_api_key:
             raise LLMNotConfigured("DeepSeek API Key 未配置")
 
@@ -68,7 +78,10 @@ class DeepSeekAdapter(LLMAdapter):
         request_json = {
             "model": self.settings.deepseek_model,
             "messages": [
-                {"role": "system", "content": f"{system_prompt}\n必须只返回一个合法 json 对象，不要输出 markdown。"},
+                {
+                    "role": "system",
+                    "content": f"{system_prompt}\n必须只返回一个合法 json 对象，不要输出 markdown。",
+                },
                 {"role": "user", "content": self._payload_to_text(user_payload)},
             ],
             "temperature": self.settings.llm_temperature,
@@ -92,7 +105,7 @@ class DeepSeekAdapter(LLMAdapter):
             content = data["choices"][0]["message"]["content"]
             output = parse_json_object(content)
             return output
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             error = str(exc)
             raise LLMError(error) from exc
         finally:
@@ -116,6 +129,7 @@ class DeepSeekAdapter(LLMAdapter):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> Iterator[str]:
+        """调用大模型并逐段返回文本。"""
         if not self.settings.deepseek_api_key:
             raise LLMNotConfigured("DeepSeek API Key 未配置")
 
@@ -123,7 +137,10 @@ class DeepSeekAdapter(LLMAdapter):
         request_json = {
             "model": self.settings.deepseek_model,
             "messages": [
-                {"role": "system", "content": f"{system_prompt}\n请直接输出自然语言回答，不要输出 JSON 或 markdown 代码块。"},
+                {
+                    "role": "system",
+                    "content": f"{system_prompt}\n请直接输出自然语言回答，不要输出 JSON 或 markdown 代码块。",
+                },
                 {"role": "user", "content": self._payload_to_text(user_payload)},
             ],
             "temperature": self.settings.llm_temperature,
@@ -157,7 +174,7 @@ class DeepSeekAdapter(LLMAdapter):
                         if delta:
                             chunks.append(delta)
                             yield delta
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             error = str(exc)
             raise LLMError(error) from exc
         finally:
@@ -175,15 +192,19 @@ class DeepSeekAdapter(LLMAdapter):
 
     @staticmethod
     def _payload_to_text(payload: dict[str, Any]) -> str:
+        """将流式响应载荷提取为文本。"""
         import json
 
-        return json.dumps(payload, ensure_ascii=False) #ensure_ascii=False保证中文的正常显示
+        return json.dumps(
+            payload, ensure_ascii=False
+        )  # 关闭 ASCII 转义，确保中文正常显示
 
 
 class FakeLLMAdapter(LLMAdapter):
     model = "fake-llm"
 
     def __init__(self, run_repo: AgentRunRepository | None = None) -> None:
+        """初始化 FakeLLMAdapter 所需的依赖。"""
         self.run_repo = run_repo or AgentRunRepository()
 
     def complete_json(
@@ -194,7 +215,10 @@ class FakeLLMAdapter(LLMAdapter):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> dict[str, Any]:
-        query = str(user_payload.get("message") or user_payload.get("task_title") or "学习任务")
+        """调用大模型并返回结构化 JSON 结果。"""
+        query = str(
+            user_payload.get("message") or user_payload.get("task_title") or "学习任务"
+        )
         output = {
             "summary": f"围绕“{query[:30]}”生成的结构化结果。",
             "reply": f"我会结合当前任务、资料和学习记录，先帮你拆出下一步：{query[:40]}。",
@@ -224,13 +248,17 @@ class FakeLLMAdapter(LLMAdapter):
         user_payload: dict[str, Any],
         task_id: str | None = None,
     ) -> Iterator[str]:
-        output = self.complete_json(agent_name, prompt_version, system_prompt, user_payload, task_id)
+        """调用大模型并逐段返回文本。"""
+        output = self.complete_json(
+            agent_name, prompt_version, system_prompt, user_payload, task_id
+        )
         text = str(output.get("reply", ""))
         for index in range(0, len(text), 8):
             yield text[index : index + 8]
 
 
 def get_llm_adapter(fake: bool = False) -> LLMAdapter:
+    """根据配置创建大模型适配器。"""
     if fake:
         return FakeLLMAdapter()
     return DeepSeekAdapter()

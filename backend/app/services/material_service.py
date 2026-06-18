@@ -10,7 +10,7 @@ from app.core.ids import new_id
 from app.ingestion.chunker import chunk_pages
 from app.ingestion.pdf_parser import parse_pdf
 from app.ingestion.text_cleaner import clean_text
-from app.repositories import MaterialRepository
+from app.repositories.material_repository import MaterialRepository
 from app.services.task_service import TaskService
 from app.storage.file_store import FileStore
 
@@ -24,14 +24,17 @@ class MaterialService:
     max_pdf_size = 30 * 1024 * 1024
 
     def __init__(self) -> None:
+        """初始化 MaterialService 所需的依赖。"""
         self.tasks = TaskService()
         self.repo = MaterialRepository()
         self.files = FileStore()
 
     def list_materials(self, task_id: str) -> list[dict[str, Any]]:
+        """查询任务关联的学习资料。"""
         return self.tasks.get_task(task_id)["materials"]
 
     def upload_pdf(self, task_id: str, file: UploadFile) -> dict[str, Any]:
+        """保存、解析并切分上传的 PDF 资料。"""
         self.tasks.get_task(task_id)
         if not file.filename or not file.filename.lower().endswith(".pdf"):
             raise bad_request("只支持上传 PDF 文件")
@@ -50,11 +53,20 @@ class MaterialService:
             raise bad_request("PDF 未解析到有效文本")
 
         text_path = self.files.save_text(task_id, material_id, text)
-        self.repo.insert_with_id(material_id, task_id, file.filename, size, len(text), str(path), str(text_path))
+        self.repo.insert_with_id(
+            material_id,
+            task_id,
+            file.filename,
+            size,
+            len(text),
+            str(path),
+            str(text_path),
+        )
         self.repo.add_chunks(task_id, material_id, chunk_pages(pages))
         return self.tasks.get_task(task_id)
 
     def delete_material(self, task_id: str, material_id: str) -> dict[str, Any]:
+        """删除学习资料及其本地文件。"""
         material = self.repo.get(material_id, task_id)
         if not material:
             raise not_found("资料不存在")

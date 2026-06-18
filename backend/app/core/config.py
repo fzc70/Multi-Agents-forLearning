@@ -23,14 +23,18 @@ class Settings(BaseSettings):
 
     cors_origins: str = Field(default="http://127.0.0.1:5173,http://localhost:5173")
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     @property
     def data_path(self) -> Path:
+        """返回并创建应用数据目录。"""
         return Path(self.data_dir).resolve()
 
     @property
     def sqlite_path(self) -> Path:
+        """返回 SQLite 数据库文件路径。"""
         prefix = "sqlite:///"
         if self.database_url.startswith(prefix):
             return Path(self.database_url.removeprefix(prefix)).resolve()
@@ -38,9 +42,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
+        """将跨域来源配置解析为列表。"""
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
 
 
 @lru_cache
 def get_settings() -> Settings:
+    """返回缓存后的应用配置。"""
     return Settings()

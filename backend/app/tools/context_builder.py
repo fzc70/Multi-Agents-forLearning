@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.repositories import ConversationRepository, MemoryRepository, ProfileRepository
+from app.repositories.conversation_repository import ConversationRepository
+from app.repositories.memory_repository import MemoryRepository
+from app.repositories.profile_repository import ProfileRepository
 from app.tools.retrieval_tool import RetrievalTool
 
 
@@ -10,12 +12,16 @@ class ContextBuilder:
     """统一控制上下文来源、长度和优先级，避免在工作流里散落拼接逻辑。"""
 
     def __init__(self) -> None:
+        """初始化 ContextBuilder 所需的依赖。"""
         self.retrieval = RetrievalTool()
         self.profile = ProfileRepository()
         self.memory = MemoryRepository()
         self.conversation = ConversationRepository()
 
-    def build_for_task(self, task: dict[str, Any], query: str, top_k: int = 6) -> dict[str, Any]:
+    def build_for_task(
+        self, task: dict[str, Any], query: str, top_k: int = 6
+    ) -> dict[str, Any]:
+        """汇总画像、会话、资料和记忆，构建任务上下文。"""
         task_id = task["id"]
         profile_items = self.profile.list_dimensions(task_id)
         memories = self.memory.list(task_id, limit=8)
@@ -38,11 +44,16 @@ class ContextBuilder:
             "memory": memories,
             "recent_messages": messages,
             "retrieved_contexts": self._trim_contexts(retrieved),
-            "source_refs": [item["source_ref"] for item in retrieved if item.get("source_ref")],
+            "source_refs": [
+                item["source_ref"] for item in retrieved if item.get("source_ref")
+            ],
         }
 
     @staticmethod
-    def _trim_contexts(contexts: list[dict[str, Any]], max_chars: int = 4200) -> list[dict[str, Any]]:
+    def _trim_contexts(
+        contexts: list[dict[str, Any]], max_chars: int = 4200
+    ) -> list[dict[str, Any]]:
+        """按上下文预算裁剪检索结果。"""
         total = 0
         result: list[dict[str, Any]] = []
         for item in contexts:

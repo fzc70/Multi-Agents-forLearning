@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.errors import bad_request
-from app.repositories import KnowledgeGraphRepository
+from app.repositories.knowledge_graph_repository import KnowledgeGraphRepository
 from app.services.task_service import TaskService
 from app.storage.database import loads
-from app.workflows import KnowledgeGraphWorkflow
+from app.workflows.knowledge_graph_workflow import KnowledgeGraphWorkflow
 
 
 class KnowledgeGraphService:
@@ -16,11 +16,13 @@ class KnowledgeGraphService:
     """
 
     def __init__(self) -> None:
+        """初始化 KnowledgeGraphService 所需的依赖。"""
         self.tasks = TaskService()
         self.workflow = KnowledgeGraphWorkflow()
         self.repo = KnowledgeGraphRepository()
 
     def build(self, task_id: str) -> dict[str, Any]:
+        """生成并保存任务知识图谱。"""
         task = self.tasks.get_task(task_id)
         try:
             return self.workflow.run(task)
@@ -28,6 +30,7 @@ class KnowledgeGraphService:
             raise bad_request(str(exc)) from exc
 
     def latest(self, task_id: str) -> dict[str, Any] | None:
+        """返回任务最新的知识图谱。"""
         self.tasks.get_task(task_id)
         row = self.repo.latest(task_id)
         if not row:

@@ -4,6 +4,7 @@ from typing import Any
 
 
 def parse_json_object(text: str) -> dict[str, Any]:
+    """从模型输出中解析一个 JSON 对象。"""
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?", "", text).strip()

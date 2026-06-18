@@ -12,14 +12,19 @@ class EvaluatorAgent(BaseAgent):
     )
 
     def run(self, payload: dict[str, Any], task_id: str) -> dict[str, Any]:
+        """综合学习证据生成结构化评估结果。"""
         output = self.run_llm(payload, task_id)
         if output and "score" in output:
             return output
         answers = payload.get("answers") or []
         task_title = str(payload.get("task_title", "当前任务"))
         score = self._score_from_answers(answers)
-        weak_points = self._extract_values(answers, ("weak_point", "weakness", "knowledge_point", "topic"))
-        mistake_types = self._extract_values(answers, ("mistake_type", "error_type", "reason"))
+        weak_points = self._extract_values(
+            answers, ("weak_point", "weakness", "knowledge_point", "topic")
+        )
+        mistake_types = self._extract_values(
+            answers, ("mistake_type", "error_type", "reason")
+        )
         if not weak_points and score < 75:
             weak_points = ["需要补充作答依据"]
         if not mistake_types and score < 75:
@@ -41,6 +46,7 @@ class EvaluatorAgent(BaseAgent):
 
     @staticmethod
     def _score_from_answers(answers: list[dict[str, Any]]) -> int:
+        """根据可用作答证据计算评估分数。"""
         if not answers:
             return 0
         explicit_scores = []
@@ -54,7 +60,12 @@ class EvaluatorAgent(BaseAgent):
                     pass
             if "correct" in item:
                 correctness.append(1 if item.get("correct") else 0)
-            text = str(item.get("answer") or item.get("content") or item.get("student_answer") or "")
+            text = str(
+                item.get("answer")
+                or item.get("content")
+                or item.get("student_answer")
+                or ""
+            )
             completeness.append(min(1.0, len(text.strip()) / 80))
         if explicit_scores:
             average = sum(explicit_scores) / len(explicit_scores)
@@ -64,7 +75,10 @@ class EvaluatorAgent(BaseAgent):
         return round(sum(completeness) / len(completeness) * 72)
 
     @staticmethod
-    def _extract_values(answers: list[dict[str, Any]], keys: tuple[str, ...]) -> list[str]:
+    def _extract_values(
+        answers: list[dict[str, Any]], keys: tuple[str, ...]
+    ) -> list[str]:
+        """从输入数据中提取有效指标值。"""
         values = []
         for item in answers:
             for key in keys:
@@ -77,6 +91,7 @@ class EvaluatorAgent(BaseAgent):
 
     @staticmethod
     def _mastery_text(score: int, answer_count: int) -> str:
+        """根据分数生成掌握度描述。"""
         if answer_count == 0:
             return "暂无有效作答记录，无法形成可靠评估。"
         if score >= 85:

@@ -4,10 +4,11 @@ import re
 from collections import Counter
 from typing import Any
 
-from app.repositories import MaterialRepository
+from app.repositories.material_repository import MaterialRepository
 
 
 def _tokens(text: str) -> list[str]:
+    """将文本拆分为用于检索评分的词项。"""
     latin = re.findall(r"[A-Za-z0-9_]{2,}", text.lower())
     chinese = re.findall(r"[\u4e00-\u9fff]{2,}", text)
     chars: list[str] = []
@@ -18,9 +19,13 @@ def _tokens(text: str) -> list[str]:
 
 class RetrievalTool:
     def __init__(self, material_repo: MaterialRepository | None = None) -> None:
+        """初始化 RetrievalTool 所需的依赖。"""
         self.material_repo = material_repo or MaterialRepository()
 
-    def search(self, task_id: str, query: str, top_k: int = 5, anchors: list[str] | None = None) -> list[dict[str, Any]]:
+    def search(
+        self, task_id: str, query: str, top_k: int = 5, anchors: list[str] | None = None
+    ) -> list[dict[str, Any]]:
+        """检索与查询最相关的学习资料片段。"""
         chunks = self.material_repo.list_chunks(task_id)
         if not chunks:
             return []
@@ -60,12 +65,14 @@ class RetrievalTool:
 
     @staticmethod
     def _idf(total_docs: int, doc_freq: int) -> float:
+        """计算词项的逆文档频率。"""
         import math
 
         return math.log(1 + (total_docs - doc_freq + 0.5) / (doc_freq + 0.5))
 
     @staticmethod
     def _to_result(score: float, chunk: dict[str, Any]) -> dict[str, Any]:
+        """将数据库记录转换为检索结果。"""
         return {
             "score": round(score, 4),
             "chunk_id": chunk["id"],
