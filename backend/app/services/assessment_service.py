@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.task_service import TaskService
-from app.workflows.workflows import AssessmentWorkflow
+from app.workflows import AssessmentWorkflow
 
 
 class AssessmentService:
@@ -20,4 +20,3 @@ class AssessmentService:
         task = self.tasks.get_task(task_id)
         self.workflow.run(task, answers)
         return self.tasks.get_task(task_id)
-

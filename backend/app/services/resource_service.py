@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.errors import bad_request, not_found
 from app.domain.constants import RESOURCE_TYPE_SET
-from app.repositories.repositories import (
+from app.repositories import (
     AssessmentRepository,
     LearningPathRepository,
     MemoryRepository,
@@ -12,12 +12,12 @@ from app.repositories.repositories import (
     ResourceMasteryRepository,
     ResourceRepository,
     TaskRepository,
-    loads,
 )
+from app.storage.database import loads
 from app.services.exercise_service import ExerciseService
 from app.services.task_service import TaskService
 from app.tools.resource_quality import ResourceQualityGate
-from app.workflows.workflows import ResourceGenerationWorkflow
+from app.workflows import ResourceGenerationWorkflow
 
 
 class ResourceService:

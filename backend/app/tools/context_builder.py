@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.repositories.repositories import ConversationRepository, MemoryRepository, ProfileRepository
+from app.repositories import ConversationRepository, MemoryRepository, ProfileRepository
 from app.tools.retrieval_tool import RetrievalTool
 
 

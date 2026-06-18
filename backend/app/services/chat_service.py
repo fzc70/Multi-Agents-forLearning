@@ -4,7 +4,7 @@ from typing import Any
 
 from app.core.errors import bad_request
 from app.services.task_service import TaskService
-from app.workflows.workflows import ChatProfileWorkflow
+from app.workflows import ChatProfileWorkflow
 
 
 class ChatService:
@@ -34,4 +34,3 @@ class ChatService:
             if event.get("type") == "done":
                 event["task"] = self.tasks.get_task(task_id)
             yield event
-

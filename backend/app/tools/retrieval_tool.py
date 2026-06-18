@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from typing import Any
 
-from app.repositories.repositories import MaterialRepository
+from app.repositories import MaterialRepository
 
 
 def _tokens(text: str) -> list[str]:

@@ -10,7 +10,7 @@ from app.core.ids import new_id
 from app.ingestion.chunker import chunk_pages
 from app.ingestion.pdf_parser import parse_pdf
 from app.ingestion.text_cleaner import clean_text
-from app.repositories.repositories import MaterialRepository
+from app.repositories import MaterialRepository
 from app.services.task_service import TaskService
 from app.storage.file_store import FileStore
 
@@ -66,4 +66,3 @@ class MaterialService:
                     pass
         self.repo.delete(material_id, task_id)
         return self.tasks.get_task(task_id)
-

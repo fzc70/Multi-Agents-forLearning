@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.repositories.repositories import AgentRunRepository, loads
+from app.repositories import AgentRunRepository
+from app.storage.database import loads
 
 
 class AgentRunService:
@@ -20,4 +21,3 @@ class AgentRunService:
             }
             for row in self.repo.list(task_id, limit)
         ]
-

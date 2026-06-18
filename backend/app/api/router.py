@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.config import get_settings
 from app.llm.adapter import DeepSeekAdapter, LLMNotConfigured
-from app.schemas.api import (
+from app.schemas import (
     AdjustPathRequest,
     AgentRunLog,
     AssessmentRequest,

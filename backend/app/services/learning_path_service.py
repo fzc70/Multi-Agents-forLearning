@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.task_service import TaskService
-from app.workflows.workflows import LearningPathWorkflow
+from app.workflows import LearningPathWorkflow
 
 
 class LearningPathService:
@@ -22,4 +22,3 @@ class LearningPathService:
         self.tasks.get_task(task_id)
         self.workflow.complete_step(task_id, step_id)
         return self.tasks.get_task(task_id)
-

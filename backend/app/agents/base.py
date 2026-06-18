@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.llm.adapter import LLMAdapter, LLMError, LLMNotConfigured, get_llm_adapter
-from app.repositories.repositories import AgentRunRepository
+from app.repositories import AgentRunRepository
 
 
 class BaseAgent:

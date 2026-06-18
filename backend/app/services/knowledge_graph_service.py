@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.errors import bad_request
-from app.repositories.repositories import KnowledgeGraphRepository, loads
+from app.repositories import KnowledgeGraphRepository
 from app.services.task_service import TaskService
-from app.workflows.workflows import KnowledgeGraphWorkflow
+from app.storage.database import loads
+from app.workflows import KnowledgeGraphWorkflow
 
 
 class KnowledgeGraphService:
@@ -40,4 +41,3 @@ class KnowledgeGraphService:
             "source_stats": loads(row["source_stats"], {}),
             "created_at": row["created_at"],
         }
-

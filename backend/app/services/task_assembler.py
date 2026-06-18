@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.domain.constants import RESOURCE_TYPE_EXERCISE
-from app.repositories.repositories import (
+from app.repositories import (
     AssessmentRepository,
     ConversationRepository,
     LearningPathRepository,
@@ -11,8 +11,8 @@ from app.repositories.repositories import (
     ProfileRepository,
     ResourceRepository,
     TaskRepository,
-    loads,
 )
+from app.storage.database import loads
 from app.tools.resource_quality import ResourceQualityGate
 
 

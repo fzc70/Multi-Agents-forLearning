@@ -5,7 +5,7 @@ from typing import Any
 from app.agents.grading_agent import GradingAgent
 from app.core.errors import bad_request, not_found
 from app.domain.constants import RESOURCE_TYPE_EXERCISE
-from app.repositories.repositories import (
+from app.repositories import (
     AssessmentRepository,
     ExerciseAttemptRepository,
     MemoryRepository,
@@ -13,8 +13,8 @@ from app.repositories.repositories import (
     ResourceMasteryRepository,
     ResourceRepository,
     TaskRepository,
-    loads,
 )
+from app.storage.database import loads
 from app.services.task_service import TaskService
 from app.tools.resource_quality import ResourceQualityGate
 

@@ -8,7 +8,7 @@ import httpx
 
 from app.core.config import Settings, get_settings
 from app.llm.json_parser import parse_json_object
-from app.repositories.repositories import AgentRunRepository
+from app.repositories import AgentRunRepository
 
 
 class LLMError(RuntimeError):
@@ -177,7 +177,7 @@ class DeepSeekAdapter(LLMAdapter):
     def _payload_to_text(payload: dict[str, Any]) -> str:
         import json
 
-        return json.dumps(payload, ensure_ascii=False)
+        return json.dumps(payload, ensure_ascii=False) #ensure_ascii=False保证中文的正常显示
 
 
 class FakeLLMAdapter(LLMAdapter):

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.errors import bad_request, not_found
-from app.repositories.repositories import TaskRepository
+from app.repositories import TaskRepository
 from app.services.task_assembler import TaskAssembler
 
 
@@ -37,4 +37,3 @@ class TaskService:
         self.get_task(task_id)
         self.repo.delete(task_id)
         return {"ok": True}
-
